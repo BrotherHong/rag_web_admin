@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { checkDuplicates, batchUpload, getUploadProgress, getCategories } from '../services/api';
+import { useToast } from '../contexts/ToastContext';
 
 const UploadFiles = ({ onNavigateToKnowledgeBase }) => {
+  const toast = useToast();
+  
   // 檔案選擇與管理
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -149,7 +152,7 @@ const UploadFiles = ({ onNavigateToKnowledgeBase }) => {
   // 檢查重複檔案
   const handleCheckDuplicates = async () => {
     if (selectedFiles.length === 0) {
-      alert('請先選擇檔案');
+      toast.warning('請先選擇檔案');
       return;
     }
     
@@ -167,7 +170,7 @@ const UploadFiles = ({ onNavigateToKnowledgeBase }) => {
       setDuplicateCheckResults(response.data);
       setCurrentStep(2);
     } else {
-      alert('檢查重複檔案失敗：' + response.message);
+      toast.error('檢查重複檔案失敗：' + response.message);
     }
     
     setCheckingDuplicates(false);
@@ -187,7 +190,7 @@ const UploadFiles = ({ onNavigateToKnowledgeBase }) => {
   // 開始批次上傳
   const handleStartUpload = async () => {
     if (selectedFiles.length === 0) {
-      alert('沒有可上傳的檔案');
+      toast.warning('沒有可上傳的檔案');
       return;
     }
     
@@ -204,8 +207,9 @@ const UploadFiles = ({ onNavigateToKnowledgeBase }) => {
     
     if (response.success) {
       setUploadTaskId(response.data.taskId);
+      toast.success('上傳任務已建立');
     } else {
-      alert('建立上傳任務失敗：' + response.message);
+      toast.error('建立上傳任務失敗：' + response.message);
       setUploading(false);
     }
   };

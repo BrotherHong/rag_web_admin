@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
 import { getFiles, deleteFile, downloadFile, getCategoriesWithDetails } from '../services/api';
+import { useModalAnimation } from '../hooks/useModalAnimation';
+import { useToast } from '../contexts/ToastContext';
 
 function KnowledgeBase() {
+  const toast = useToast();
   const [files, setFiles] = useState([]);
   const [categories, setCategories] = useState([]);
   const [categoryMap, setCategoryMap] = useState({}); // 用於儲存分類名稱到顏色的對應
@@ -9,6 +12,9 @@ function KnowledgeBase() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
+
+  // 對話框動畫
+  const deleteModal = useModalAnimation(showDeleteConfirm !== null, () => setShowDeleteConfirm(null));
   
   // 獲取當前使用者權限
   const getUserInfo = () => {
@@ -76,14 +82,15 @@ function KnowledgeBase() {
       if (response.success) {
         // 重新載入檔案列表
         await loadFiles();
-        setShowDeleteConfirm(null);
+        deleteModal.handleClose();
+        toast.success('檔案刪除成功');
       } else {
         console.error('刪除失敗:', response.message);
-        alert(response.message);
+        toast.error(response.message);
       }
     } catch (error) {
       console.error('刪除錯誤:', error);
-      alert('刪除檔案失敗');
+      toast.error('刪除檔案失敗');
     }
   };
 
@@ -94,14 +101,14 @@ function KnowledgeBase() {
       
       if (response.success) {
         // 實際應用中會開啟下載連結
-        alert(`下載功能：${response.data.fileName}\n（實際應用中會自動下載）`);
+        toast.info(`準備下載：${response.data.fileName}`);
       } else {
         console.error('下載失敗:', response.message);
-        alert(response.message);
+        toast.error(response.message);
       }
     } catch (error) {
       console.error('下載錯誤:', error);
-      alert('下載檔案失敗');
+      toast.error('下載檔案失敗');
     }
   };
 
@@ -383,9 +390,9 @@ function KnowledgeBase() {
       </div>
 
       {/* 刪除確認模態框 */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 animate-scaleIn">
+      {deleteModal.shouldRender && (
+        <div className={`fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 ${deleteModal.animationClass}`}>
+          <div className={`bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 ${deleteModal.contentAnimationClass}`}>
             <div className="flex items-center justify-center w-12 h-12 rounded-full mb-4 mx-auto bg-red-50">
               <svg className="w-6 h-6" style={{ color: 'var(--ncku-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
@@ -398,7 +405,7 @@ function KnowledgeBase() {
             </p>
             <div className="flex space-x-3">
               <button
-                onClick={() => setShowDeleteConfirm(null)}
+                onClick={deleteModal.handleClose}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
               >
                 取消

@@ -8,11 +8,15 @@ import {
   addCategory,
   deleteCategory
 } from '../services/api';
+import { useModalAnimation } from '../hooks/useModalAnimation';
+import { useToast } from '../contexts/ToastContext';
+import ConfirmDialog from './common/ConfirmDialog';
 import KnowledgeBase from './KnowledgeBase';
 import UploadFiles from './UploadFiles';
 
 function Dashboard() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [currentPage, setCurrentPage] = useState('knowledge-base');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -602,9 +606,14 @@ function DashboardHome() {
 function CategoryManagement() {
   const [categories, setCategories] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState('blue');
   const [isLoading, setIsLoading] = useState(true);
+
+  // 對話框動畫
+  const addModal = useModalAnimation(showAddModal, () => setShowAddModal(false));
+  const deleteModal = useModalAnimation(showDeleteConfirm !== null, () => setShowDeleteConfirm(null));
 
   // 可用的顏色選項
   const colorOptions = [
@@ -664,31 +673,35 @@ function CategoryManagement() {
           await loadCategories();
           setNewCategoryName('');
           setNewCategoryColor('blue');
-          setShowAddModal(false);
+          addModal.handleClose();
+          toast.success('分類新增成功');
         } else {
-          alert('新增失敗：' + response.message);
+          toast.error('新增失敗：' + response.message);
         }
       } catch (error) {
         console.error('新增分類錯誤:', error);
-        alert('新增分類失敗');
+        toast.error('新增分類失敗');
       }
     }
   };
 
-  const handleDeleteCategory = async (id) => {
-    if (confirm('確定要刪除這個分類嗎？')) {
-      try {
-        const response = await deleteCategory(id);
-        if (response.success) {
-          // 重新載入分類列表
-          await loadCategories();
-        } else {
-          alert('刪除失敗：' + response.message);
-        }
-      } catch (error) {
-        console.error('刪除分類錯誤:', error);
-        alert('刪除分類失敗');
+  const handleDeleteCategory = async (category) => {
+    setShowDeleteConfirm(category);
+  };
+
+  const confirmDeleteCategory = async () => {
+    try {
+      const response = await deleteCategory(showDeleteConfirm.id);
+      if (response.success) {
+        // 重新載入分類列表
+        await loadCategories();
+        toast.success('分類刪除成功');
+      } else {
+        toast.error('刪除失敗：' + response.message);
       }
+    } catch (error) {
+      console.error('刪除分類錯誤:', error);
+      toast.error('刪除分類失敗');
     }
   };
 
@@ -739,7 +752,7 @@ function CategoryManagement() {
               </div>
               {category.name !== '未分類' && (
                 <button
-                  onClick={() => handleDeleteCategory(category.id)}
+                  onClick={() => handleDeleteCategory(category)}
                   className="text-red-600 hover:text-red-800 cursor-pointer"
                   title="刪除分類"
                 >
@@ -753,9 +766,9 @@ function CategoryManagement() {
         ))}
       </div>
 
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
-          <div className="bg-white rounded-lg p-6 w-96 mx-4 animate-scaleIn">
+      {addModal.shouldRender && (
+        <div className={`fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 ${addModal.animationClass}`}>
+          <div className={`bg-white rounded-lg p-6 w-96 mx-4 ${addModal.contentAnimationClass}`}>
             <h3 className="text-lg font-semibold mb-4">新增分類</h3>
             
             {/* 分類名稱輸入 */}
@@ -800,7 +813,7 @@ function CategoryManagement() {
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => {
-                  setShowAddModal(false);
+                  addModal.handleClose();
                   setNewCategoryName('');
                   setNewCategoryColor('blue');
                 }}
@@ -820,6 +833,19 @@ function CategoryManagement() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        shouldRender={deleteModal.shouldRender}
+        isClosing={deleteModal.isClosing}
+        animationClass={deleteModal.animationClass}
+        contentAnimationClass={deleteModal.contentAnimationClass}
+        onClose={deleteModal.handleClose}
+        onConfirm={confirmDeleteCategory}
+        title="確認刪除"
+        message={`確定要刪除分類「${showDeleteConfirm?.name}」嗎？`}
+        confirmText="刪除"
+        cancelText="取消"
+      />
     </div>
   );
 }

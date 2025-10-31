@@ -21,7 +21,6 @@ function KnowledgeBase() {
   };
   
   const user = getUserInfo();
-  const isManager = user.role === 'manager' || user.role === 'admin'; // manager 以上可刪除
 
   // 載入檔案列表和分類
   useEffect(() => {
@@ -95,7 +94,6 @@ function KnowledgeBase() {
       
       if (response.success) {
         // 實際應用中會開啟下載連結
-        console.log('下載連結:', response.data.url);
         alert(`下載功能：${response.data.fileName}\n（實際應用中會自動下載）`);
       } else {
         console.error('下載失敗:', response.message);
@@ -353,30 +351,17 @@ function KnowledgeBase() {
                                 d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
                       </button>
-                      {isManager ? (
-                        <button 
-                          onClick={() => setShowDeleteConfirm(file.id)}
-                          style={{ color: 'var(--ncku-red)' }}
-                          className="hover:opacity-70 transition-opacity cursor-pointer"
-                          title="刪除檔案"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      ) : (
-                        <button 
-                          disabled
-                          className="text-gray-300 cursor-not-allowed"
-                          title="僅主管以上可刪除檔案"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      )}
+                      <button 
+                        onClick={() => setShowDeleteConfirm(file.id)}
+                        style={{ color: 'var(--ncku-red)' }}
+                        className="hover:opacity-70 transition-opacity cursor-pointer"
+                        title="刪除檔案"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     </div>
                   </td>
                   </tr>

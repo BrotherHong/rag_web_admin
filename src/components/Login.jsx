@@ -22,7 +22,7 @@ function Login({ onLogin }) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
         
-        onLogin(true);
+        onLogin(true, response.data.user.role);
       } else {
         setError(response.message || '帳號或密碼錯誤');
         setIsLoading(false);
@@ -61,9 +61,9 @@ function Login({ onLogin }) {
               </svg>
             </div>
             <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--ncku-red)' }}>
-              人事室 AI 客服
+              AI 客服系統
             </h1>
-            <p className="text-gray-600 text-sm">後台管理系統</p>
+            <p className="text-gray-600 text-sm">管理後台登入</p>
           </div>
 
           {/* 登入表單 */}
@@ -148,7 +148,12 @@ function Login({ onLogin }) {
 
           {/* 測試帳號提示 */}
           <div className="mt-6 text-center text-xs text-gray-500 border-t pt-4">
-            <p>測試帳號：admin / admin123</p>
+            <p className="font-semibold mb-2">測試帳號</p>
+            <div className="space-y-1">
+              <p>系統管理員：superadmin / super123</p>
+              <p>人事室管理員：hr_admin / admin123</p>
+              <p>會計室管理員：acc_admin / admin123</p>
+            </div>
           </div>
         </div>
 

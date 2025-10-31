@@ -3,9 +3,8 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // 權限級別定義
 const ROLES = {
-  ADMIN: 'admin',      // 最高權限：可以做所有操作
-  MANAGER: 'manager',  // 中等權限：可以管理檔案和分類，不能管理使用者
-  VIEWER: 'viewer'     // 最低權限：只能查看，不能修改
+  SUPER_ADMIN: 'super_admin',  // 系統管理員：可以管理所有處室
+  ADMIN: 'admin'               // 處室管理員：可以管理自己處室的所有內容
 };
 
 // 權限檢查工具函數
@@ -19,11 +18,10 @@ const checkPermission = (requiredRole) => {
     const user = JSON.parse(userStr);
     const userRole = user.role;
     
-    // 權限層級：admin > manager > viewer
+    // 權限層級：super_admin > admin
     const roleHierarchy = {
-      admin: 3,
-      manager: 2,
-      viewer: 1
+      super_admin: 2,
+      admin: 1
     };
     
     const userLevel = roleHierarchy[userRole] || 0;
@@ -54,38 +52,131 @@ const getCurrentUser = () => {
 
 // 模擬後端資料庫
 let mockDatabase = {
+  // 處室資料
+  departments: [
+    { 
+      id: 1, 
+      name: '人事室', 
+      description: '負責人事相關業務', 
+      color: 'red',
+      createdAt: '2025-10-01',
+      settings: {
+        model: 'gpt-4',
+        temperature: 0.7,
+        maxTokens: 2000,
+        topP: 0.9,
+        tone: 'professional',
+        similarityThreshold: 0.75,
+        maxRetrievalDocs: 5,
+        autoCleanupDays: 90,
+        indexUpdateFrequency: 'daily',
+      }
+    },
+    { 
+      id: 2, 
+      name: '會計室', 
+      description: '負責會計相關業務', 
+      color: 'blue',
+      createdAt: '2025-10-01',
+      settings: {
+        model: 'gpt-4',
+        temperature: 0.7,
+        maxTokens: 2000,
+        topP: 0.9,
+        tone: 'professional',
+        similarityThreshold: 0.75,
+        maxRetrievalDocs: 5,
+        autoCleanupDays: 90,
+        indexUpdateFrequency: 'daily',
+      }
+    },
+    { 
+      id: 3, 
+      name: '總務處', 
+      description: '負責總務相關業務', 
+      color: 'green',
+      createdAt: '2025-10-01',
+      settings: {
+        model: 'gpt-4',
+        temperature: 0.7,
+        maxTokens: 2000,
+        topP: 0.9,
+        tone: 'professional',
+        similarityThreshold: 0.75,
+        maxRetrievalDocs: 5,
+        autoCleanupDays: 90,
+        indexUpdateFrequency: 'daily',
+      }
+    }
+  ],
+  // 使用者資料 (新增 departmentId 欄位)
   users: [
-    { id: 1, username: 'admin', password: 'admin123', role: 'admin', name: '系統管理員', email: 'admin@ncku.edu.tw' },
-    { id: 2, username: 'hr_manager', password: 'manager123', role: 'manager', name: '人事主管', email: 'hr@ncku.edu.tw' },
-    { id: 3, username: 'viewer', password: 'viewer123', role: 'viewer', name: '一般檢視者', email: 'viewer@ncku.edu.tw' }
+    { id: 1, username: 'superadmin', password: 'super123', role: 'super_admin', name: '系統管理員', email: 'superadmin@ncku.edu.tw', departmentId: null, status: 'active' },
+    { id: 2, username: 'hr_admin', password: 'admin123', role: 'admin', name: '人事室管理員', email: 'hr_admin@ncku.edu.tw', departmentId: 1, status: 'active' },
+    { id: 3, username: 'acc_admin', password: 'admin123', role: 'admin', name: '會計室管理員', email: 'acc_admin@ncku.edu.tw', departmentId: 2, status: 'active' },
+    { id: 4, username: 'gen_admin', password: 'admin123', role: 'admin', name: '總務處管理員', email: 'gen_admin@ncku.edu.tw', departmentId: 3, status: 'active' }
   ],
-  // 分類資料（統一管理）
-  categories: [
-    { id: 1, name: '規章制度', color: 'blue', createdAt: '2025-10-01' },
-    { id: 2, name: '請假相關', color: 'green', createdAt: '2025-10-01' },
-    { id: 3, name: '薪資福利', color: 'yellow', createdAt: '2025-10-01' },
-    { id: 4, name: '未分類', color: 'gray', createdAt: '2025-10-01' }
-  ],
-  files: [
-    { id: 1, name: '人事規章.pdf', size: '2.4 MB', uploadDate: '2025-10-15', category: '規章制度', uploader: 'admin' },
-    { id: 2, name: '請假辦法.docx', size: '890 KB', uploadDate: '2025-10-14', category: '請假相關', uploader: 'admin' },
-    { id: 3, name: '薪資計算說明.pdf', size: '1.2 MB', uploadDate: '2025-10-13', category: '薪資福利', uploader: 'admin' },
-    { id: 4, name: '年終獎金發放辦法.pdf', size: '650 KB', uploadDate: '2025-10-12', category: '薪資福利', uploader: 'hr_manager' },
-    { id: 5, name: '教職員工手冊.pdf', size: '5.8 MB', uploadDate: '2025-10-10', category: '規章制度', uploader: 'admin' },
-    { id: 6, name: '差勤管理辦法.pdf', size: '1.5 MB', uploadDate: '2025-10-09', category: '規章制度', uploader: 'admin' },
-    { id: 7, name: '特休假申請流程.docx', size: '450 KB', uploadDate: '2025-10-08', category: '請假相關', uploader: 'hr_manager' },
-    { id: 8, name: '加班費計算方式.pdf', size: '780 KB', uploadDate: '2025-10-07', category: '薪資福利', uploader: 'admin' }
-  ],
-  statistics: {
-    totalFiles: 8,
-    monthlyQueries: 1234,
-    systemStatus: 'running'
+  
+  // 各處室的分類資料（按處室 ID 分組）
+  categoriesByDepartment: {
+    1: [ // 人事室
+      { id: 101, name: '規章制度', color: 'blue', createdAt: '2025-10-01', departmentId: 1 },
+      { id: 102, name: '請假相關', color: 'green', createdAt: '2025-10-01', departmentId: 1 },
+      { id: 103, name: '薪資福利', color: 'yellow', createdAt: '2025-10-01', departmentId: 1 },
+      { id: 104, name: '未分類', color: 'gray', createdAt: '2025-10-01', departmentId: 1 }
+    ],
+    2: [ // 會計室
+      { id: 201, name: '會計準則', color: 'blue', createdAt: '2025-10-01', departmentId: 2 },
+      { id: 202, name: '報表範本', color: 'purple', createdAt: '2025-10-01', departmentId: 2 },
+      { id: 203, name: '未分類', color: 'gray', createdAt: '2025-10-01', departmentId: 2 }
+    ],
+    3: [ // 總務處
+      { id: 301, name: '採購流程', color: 'orange', createdAt: '2025-10-01', departmentId: 3 },
+      { id: 302, name: '維修管理', color: 'red', createdAt: '2025-10-01', departmentId: 3 },
+      { id: 303, name: '未分類', color: 'gray', createdAt: '2025-10-01', departmentId: 3 }
+    ]
   },
-  activities: [
-    { id: 1, type: 'upload', fileName: '人事規章.pdf', user: 'admin', timestamp: '2025-10-15T10:30:00' },
-    { id: 2, type: 'delete', fileName: '舊版規章.pdf', user: 'admin', timestamp: '2025-10-14T15:20:00' },
-    { id: 3, type: 'upload', fileName: '請假辦法.docx', user: 'admin', timestamp: '2025-10-14T09:15:00' }
-  ],
+  
+  // 各處室的檔案資料（按處室 ID 分組）
+  filesByDepartment: {
+    1: [ // 人事室
+      { id: 101, name: '人事規章.pdf', size: '2.4 MB', uploadDate: '2025-10-15', category: '規章制度', uploader: 'hr_admin', departmentId: 1 },
+      { id: 102, name: '請假辦法.docx', size: '890 KB', uploadDate: '2025-10-14', category: '請假相關', uploader: 'hr_admin', departmentId: 1 },
+      { id: 103, name: '薪資計算說明.pdf', size: '1.2 MB', uploadDate: '2025-10-13', category: '薪資福利', uploader: 'hr_admin', departmentId: 1 },
+      { id: 104, name: '年終獎金發放辦法.pdf', size: '650 KB', uploadDate: '2025-10-12', category: '薪資福利', uploader: 'hr_admin', departmentId: 1 },
+      { id: 105, name: '教職員工手冊.pdf', size: '5.8 MB', uploadDate: '2025-10-10', category: '規章制度', uploader: 'hr_admin', departmentId: 1 },
+      { id: 106, name: '加班費計算方式.pdf', size: '780 KB', uploadDate: '2025-10-07', category: '薪資福利', uploader: 'hr_admin', departmentId: 1 }
+    ],
+    2: [ // 會計室
+      { id: 201, name: '會計制度手冊.pdf', size: '1.5 MB', uploadDate: '2025-10-09', category: '會計準則', uploader: 'acc_admin', departmentId: 2 },
+      { id: 202, name: '月報表範本.xlsx', size: '350 KB', uploadDate: '2025-10-08', category: '報表範本', uploader: 'acc_admin', departmentId: 2 }
+    ],
+    3: [ // 總務處
+      { id: 301, name: '總務採購流程.docx', size: '450 KB', uploadDate: '2025-10-08', category: '採購流程', uploader: 'gen_admin', departmentId: 3 },
+      { id: 302, name: '設備維修規範.pdf', size: '1.1 MB', uploadDate: '2025-10-06', category: '維修管理', uploader: 'gen_admin', departmentId: 3 }
+    ]
+  },
+  
+  // 各處室的活動記錄（按處室 ID 分組）
+  activitiesByDepartment: {
+    1: [ // 人事室
+      { id: 101, type: 'upload', fileName: '人事規章.pdf', user: 'hr_admin', timestamp: '2025-10-15T10:30:00', departmentId: 1 },
+      { id: 102, type: 'delete', fileName: '舊版規章.pdf', user: 'hr_admin', timestamp: '2025-10-14T15:20:00', departmentId: 1 },
+      { id: 103, type: 'upload', fileName: '請假辦法.docx', user: 'hr_admin', timestamp: '2025-10-14T09:15:00', departmentId: 1 }
+    ],
+    2: [ // 會計室
+      { id: 201, type: 'upload', fileName: '會計制度手冊.pdf', user: 'acc_admin', timestamp: '2025-10-09T11:20:00', departmentId: 2 },
+      { id: 202, type: 'upload', fileName: '月報表範本.xlsx', user: 'acc_admin', timestamp: '2025-10-08T14:30:00', departmentId: 2 }
+    ],
+    3: [ // 總務處
+      { id: 301, type: 'upload', fileName: '總務採購流程.docx', user: 'gen_admin', timestamp: '2025-10-08T09:00:00', departmentId: 3 },
+      { id: 302, type: 'upload', fileName: '設備維修規範.pdf', user: 'gen_admin', timestamp: '2025-10-06T16:45:00', departmentId: 3 }
+    ]
+  },
+  
+  // 系統級活動記錄（處室、使用者、系統設定的操作）
+  systemActivities: [],
+  
   // 系統設定
   settings: {
     // AI 模型設定
@@ -111,6 +202,14 @@ let mockDatabase = {
     // 備份設定
     autoBackup: true,
     backupFrequency: 'weekly',
+  },
+  // 統計資料
+  statistics: {
+    monthlyQueries: 1234,
+    systemStatus: {
+      status: 'running',
+      message: '系統運行正常'
+    }
   },
   // 上傳任務追蹤（支援多管理員並發）
   uploadTasks: {}
@@ -152,7 +251,8 @@ export const login = async (username, password) => {
             id: user.id,
             username: user.username,
             name: user.name,
-            role: user.role
+            role: user.role,
+            departmentId: user.departmentId  // 加入 departmentId
           },
           token: token
         },
@@ -244,7 +344,16 @@ export const getFiles = async (params = {}) => {
     //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     // });
     
-    let files = [...mockDatabase.files];
+    // 根據使用者的 departmentId 獲取對應的檔案
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.departmentId) {
+      return {
+        success: false,
+        message: '無法識別使用者所屬處室'
+      };
+    }
+    
+    let files = mockDatabase.filesByDepartment[currentUser.departmentId] || [];
     
     // 模擬搜尋過濾
     if (params.search) {
@@ -294,25 +403,53 @@ export const uploadFile = async (formData) => {
     const file = formData.get('file');
     const category = formData.get('category') || '未分類';
     
+    // 取得當前使用者
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.departmentId) {
+      return {
+        success: false,
+        message: '未登入或無法識別所屬處室'
+      };
+    }
+    
     if (file) {
+      // 確保該處室的檔案陣列存在
+      if (!mockDatabase.filesByDepartment[currentUser.departmentId]) {
+        mockDatabase.filesByDepartment[currentUser.departmentId] = [];
+      }
+      
+      // 生成新的檔案 ID (使用處室 ID * 100 + 當前處室檔案數量)
+      const deptFiles = mockDatabase.filesByDepartment[currentUser.departmentId];
+      const newFileId = currentUser.departmentId * 100 + deptFiles.length + 1;
+      
       const newFile = {
-        id: mockDatabase.files.length + 1,
+        id: newFileId,
         name: file.name,
         size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
         uploadDate: new Date().toISOString().split('T')[0],
         category: category,
-        uploader: 'admin'
+        uploader: currentUser.username,
+        departmentId: currentUser.departmentId
       };
       
-      mockDatabase.files.push(newFile);
+      mockDatabase.filesByDepartment[currentUser.departmentId].push(newFile);
+      
+      // 確保該處室的活動記錄陣列存在
+      if (!mockDatabase.activitiesByDepartment[currentUser.departmentId]) {
+        mockDatabase.activitiesByDepartment[currentUser.departmentId] = [];
+      }
       
       // 新增活動記錄
-      mockDatabase.activities.unshift({
-        id: mockDatabase.activities.length + 1,
+      const deptActivities = mockDatabase.activitiesByDepartment[currentUser.departmentId];
+      const newActivityId = currentUser.departmentId * 100 + deptActivities.length + 1;
+      
+      mockDatabase.activitiesByDepartment[currentUser.departmentId].unshift({
+        id: newActivityId,
         type: 'upload',
         fileName: newFile.name,
-        user: 'admin',
-        timestamp: new Date().toISOString()
+        user: currentUser.name,
+        timestamp: new Date().toISOString(),
+        departmentId: currentUser.departmentId
       });
       
       return {
@@ -343,8 +480,8 @@ export const deleteFile = async (fileId) => {
   await delay(500);
   
   try {
-    // 權限檢查：需要 manager 以上權限
-    const permission = checkPermission(ROLES.MANAGER);
+    // 權限檢查：需要 admin 權限
+    const permission = checkPermission(ROLES.ADMIN);
     if (!permission.hasPermission) {
       return {
         success: false,
@@ -357,21 +494,37 @@ export const deleteFile = async (fileId) => {
     //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     // });
     
-    const fileIndex = mockDatabase.files.findIndex(f => f.id === fileId);
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.departmentId) {
+      return {
+        success: false,
+        message: '未登入或無法識別所屬處室'
+      };
+    }
+    
+    const deptFiles = mockDatabase.filesByDepartment[currentUser.departmentId] || [];
+    const fileIndex = deptFiles.findIndex(f => f.id === fileId);
     
     if (fileIndex !== -1) {
-      const deletedFile = mockDatabase.files[fileIndex];
-      mockDatabase.files.splice(fileIndex, 1);
+      const deletedFile = deptFiles[fileIndex];
+      mockDatabase.filesByDepartment[currentUser.departmentId].splice(fileIndex, 1);
       
-      const currentUser = getCurrentUser();
+      // 確保該處室的活動記錄陣列存在
+      if (!mockDatabase.activitiesByDepartment[currentUser.departmentId]) {
+        mockDatabase.activitiesByDepartment[currentUser.departmentId] = [];
+      }
       
       // 新增活動記錄
-      mockDatabase.activities.unshift({
-        id: mockDatabase.activities.length + 1,
+      const deptActivities = mockDatabase.activitiesByDepartment[currentUser.departmentId];
+      const newActivityId = currentUser.departmentId * 100 + deptActivities.length + 1;
+      
+      mockDatabase.activitiesByDepartment[currentUser.departmentId].unshift({
+        id: newActivityId,
         type: 'delete',
         fileName: deletedFile.name,
         user: currentUser?.name || 'admin',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        departmentId: currentUser.departmentId
       });
       
       return {
@@ -405,7 +558,16 @@ export const downloadFile = async (fileId) => {
     //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     // });
     
-    const file = mockDatabase.files.find(f => f.id === fileId);
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.departmentId) {
+      return {
+        success: false,
+        message: '未登入或無法識別所屬處室'
+      };
+    }
+    
+    const deptFiles = mockDatabase.filesByDepartment[currentUser.departmentId] || [];
+    const file = deptFiles.find(f => f.id === fileId);
     
     if (file) {
       return {
@@ -443,16 +605,38 @@ export const getStatistics = async () => {
     //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     // });
     
+    // 根據使用者的 departmentId 過濾檔案
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.departmentId) {
+      return {
+        success: false,
+        message: '未登入或無法識別所屬處室'
+      };
+    }
+    
+    const deptFiles = mockDatabase.filesByDepartment[currentUser.departmentId] || [];
+    const deptCategories = mockDatabase.categoriesByDepartment[currentUser.departmentId] || [];
+    const deptActivities = mockDatabase.activitiesByDepartment[currentUser.departmentId] || [];
+    
+    // 動態計算各分類的檔案數量
+    const filesByCategory = {};
+    deptCategories.forEach(cat => {
+      filesByCategory[cat.name] = deptFiles.filter(f => f.category === cat.name).length;
+    });
+    
+    // 計算本月查詢次數 (模擬:根據處室檔案數量估算)
+    const monthlyQueries = Math.floor(deptFiles.length * 50 + Math.random() * 100);
+    
     const stats = {
-      totalFiles: mockDatabase.files.length,
-      filesByCategory: {
-        '規章制度': mockDatabase.files.filter(f => f.category === '規章制度').length,
-        '請假相關': mockDatabase.files.filter(f => f.category === '請假相關').length,
-        '薪資福利': mockDatabase.files.filter(f => f.category === '薪資福利').length,
+      totalFiles: deptFiles.length,
+      filesByCategory: filesByCategory,
+      monthlyQueries: monthlyQueries,
+      systemStatus: {
+        status: 'running',
+        message: '系統運行正常',
+        lastUpdate: new Date().toISOString()
       },
-      monthlyQueries: mockDatabase.statistics.monthlyQueries,
-      systemStatus: mockDatabase.statistics.systemStatus,
-      storageUsed: '45.6 GB',
+      storageUsed: `${(deptFiles.length * 2.5).toFixed(1)} GB`,  // 模擬:每個檔案約2.5GB
       storageTotal: '100 GB'
     };
     
@@ -481,7 +665,76 @@ export const getRecentActivities = async (limit = 10) => {
     //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     // });
     
-    const activities = mockDatabase.activities.slice(0, limit);
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.departmentId) {
+      return {
+        success: false,
+        message: '未登入或無法識別所屬處室'
+      };
+    }
+    
+    // 從該處室的活動記錄中取得資料
+    const deptActivities = mockDatabase.activitiesByDepartment[currentUser.departmentId] || [];
+    const activities = deptActivities.slice(0, limit);
+    
+    return {
+      success: true,
+      data: activities
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: '獲取活動記錄失敗'
+    };
+  }
+};
+
+/**
+ * 取得所有處室的活動記錄 (僅供系統管理員使用)
+ * @param {number} departmentId - 處室 ID，傳入 null 則取得所有處室
+ * @param {number} limit - 限制數量
+ * @returns {Promise} 活動記錄
+ */
+export const getAllActivities = async (departmentId = null, limit = 50) => {
+  await delay(300);
+  
+  try {
+    // 權限檢查：需要 super_admin 權限
+    const permission = checkPermission(ROLES.SUPER_ADMIN);
+    if (!permission.hasPermission) {
+      return {
+        success: false,
+        message: permission.message
+      };
+    }
+    
+    let allActivities = [];
+    
+    // 1. 加入系統級活動（處室、使用者管理等）
+    allActivities = [...mockDatabase.systemActivities];
+    
+    // 2. 加入處室級活動（檔案、分類操作等）
+    if (departmentId === null) {
+      // 取得所有處室的活動記錄
+      for (const deptId in mockDatabase.activitiesByDepartment) {
+        const deptActivities = mockDatabase.activitiesByDepartment[deptId] || [];
+        allActivities = allActivities.concat(deptActivities);
+      }
+    } else {
+      // 取得特定處室的活動記錄
+      const deptActivities = mockDatabase.activitiesByDepartment[departmentId] || [];
+      // 只保留該處室的系統活動
+      const systemActivitiesForDept = mockDatabase.systemActivities.filter(
+        act => act.departmentId === parseInt(departmentId)
+      );
+      allActivities = [...systemActivitiesForDept, ...deptActivities];
+    }
+    
+    // 按時間排序 (最新的在前)
+    allActivities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    // 限制數量
+    const activities = allActivities.slice(0, limit);
     
     return {
       success: true,
@@ -509,8 +762,17 @@ export const getCategories = async () => {
     //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     // });
     
-    // 從 mockDatabase.categories 動態取得分類名稱
-    let categories = mockDatabase.categories.map(cat => cat.name);
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.departmentId) {
+      return {
+        success: false,
+        message: '未登入或無法識別所屬處室'
+      };
+    }
+    
+    // 從該處室的分類中取得分類名稱
+    const deptCategories = mockDatabase.categoriesByDepartment[currentUser.departmentId] || [];
+    let categories = deptCategories.map(cat => cat.name);
     
     // 將「未分類」排在最後
     categories = categories.sort((a, b) => {
@@ -543,12 +805,23 @@ export const getCategoriesWithDetails = async () => {
     //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     // });
     
-    // 從 mockDatabase.categories 動態取得分類，並計算檔案數量
-    const categoriesWithDetails = mockDatabase.categories.map(cat => ({
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.departmentId) {
+      return {
+        success: false,
+        message: '未登入或無法識別所屬處室'
+      };
+    }
+    
+    // 從該處室的分類和檔案中取得資料
+    const deptCategories = mockDatabase.categoriesByDepartment[currentUser.departmentId] || [];
+    const deptFiles = mockDatabase.filesByDepartment[currentUser.departmentId] || [];
+    
+    const categoriesWithDetails = deptCategories.map(cat => ({
       id: cat.id,
       name: cat.name,
       color: cat.color,
-      count: mockDatabase.files.filter(f => f.category === cat.name).length,
+      count: deptFiles.filter(f => f.category === cat.name).length,
       createdAt: cat.createdAt
     }));
     
@@ -599,8 +872,23 @@ export const addCategory = async (name, color = 'gray') => {
     //   body: JSON.stringify({ name, color })
     // });
     
-    // 檢查分類名稱是否已存在
-    const exists = mockDatabase.categories.find(cat => cat.name === name);
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.departmentId) {
+      return {
+        success: false,
+        message: '未登入或無法識別所屬處室'
+      };
+    }
+    
+    // 確保該處室的分類陣列存在
+    if (!mockDatabase.categoriesByDepartment[currentUser.departmentId]) {
+      mockDatabase.categoriesByDepartment[currentUser.departmentId] = [];
+    }
+    
+    const deptCategories = mockDatabase.categoriesByDepartment[currentUser.departmentId];
+    
+    // 檢查分類名稱是否已存在（在該處室內）
+    const exists = deptCategories.find(cat => cat.name === name);
     if (exists) {
       return {
         success: false,
@@ -608,24 +896,36 @@ export const addCategory = async (name, color = 'gray') => {
       };
     }
     
-    // 新增到 mockDatabase.categories
+    // 生成新的分類 ID (使用處室 ID * 100 + 當前處室分類數量)
+    const newCategoryId = currentUser.departmentId * 100 + deptCategories.length + 1;
+    
+    // 新增到該處室的分類中
     const newCategory = {
-      id: Date.now(),
+      id: newCategoryId,
       name: name,
       color: color,
-      createdAt: new Date().toISOString().split('T')[0]
+      createdAt: new Date().toISOString().split('T')[0],
+      departmentId: currentUser.departmentId
     };
     
-    mockDatabase.categories.push(newCategory);
+    mockDatabase.categoriesByDepartment[currentUser.departmentId].push(newCategory);
+    
+    // 確保該處室的活動記錄陣列存在
+    if (!mockDatabase.activitiesByDepartment[currentUser.departmentId]) {
+      mockDatabase.activitiesByDepartment[currentUser.departmentId] = [];
+    }
     
     // 記錄活動
-    const currentUser = getCurrentUser();
-    mockDatabase.activities.unshift({
-      id: mockDatabase.activities.length + 1,
+    const deptActivities = mockDatabase.activitiesByDepartment[currentUser.departmentId];
+    const newActivityId = currentUser.departmentId * 100 + deptActivities.length + 1;
+    
+    mockDatabase.activitiesByDepartment[currentUser.departmentId].unshift({
+      id: newActivityId,
       type: 'category_add',
       categoryName: name,
       user: currentUser?.name || 'admin',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      departmentId: currentUser.departmentId
     });
     
     return {
@@ -667,7 +967,16 @@ export const deleteCategory = async (categoryId) => {
     //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     // });
     
-    const categoryIndex = mockDatabase.categories.findIndex(cat => cat.id === categoryId);
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.departmentId) {
+      return {
+        success: false,
+        message: '未登入或無法識別所屬處室'
+      };
+    }
+    
+    const deptCategories = mockDatabase.categoriesByDepartment[currentUser.departmentId] || [];
+    const categoryIndex = deptCategories.findIndex(cat => cat.id === categoryId);
     
     if (categoryIndex === -1) {
       return {
@@ -676,7 +985,7 @@ export const deleteCategory = async (categoryId) => {
       };
     }
     
-    const category = mockDatabase.categories[categoryIndex];
+    const category = deptCategories[categoryIndex];
     
     // 禁止刪除「未分類」
     if (category.name === '未分類') {
@@ -686,8 +995,9 @@ export const deleteCategory = async (categoryId) => {
       };
     }
     
-    // 檢查是否有檔案使用此分類
-    const filesWithCategory = mockDatabase.files.filter(f => f.category === category.name);
+    // 檢查是否有檔案使用此分類（在該處室內）
+    const deptFiles = mockDatabase.filesByDepartment[currentUser.departmentId] || [];
+    const filesWithCategory = deptFiles.filter(f => f.category === category.name);
     
     if (filesWithCategory.length > 0) {
       // 將使用此分類的檔案改為「未分類」
@@ -696,17 +1006,25 @@ export const deleteCategory = async (categoryId) => {
       });
     }
     
-    // 從 mockDatabase.categories 中刪除
-    mockDatabase.categories.splice(categoryIndex, 1);
+    // 從該處室的分類中刪除
+    mockDatabase.categoriesByDepartment[currentUser.departmentId].splice(categoryIndex, 1);
+    
+    // 確保該處室的活動記錄陣列存在
+    if (!mockDatabase.activitiesByDepartment[currentUser.departmentId]) {
+      mockDatabase.activitiesByDepartment[currentUser.departmentId] = [];
+    }
     
     // 記錄活動
-    const currentUser = getCurrentUser();
-    mockDatabase.activities.unshift({
-      id: mockDatabase.activities.length + 1,
+    const deptActivities = mockDatabase.activitiesByDepartment[currentUser.departmentId];
+    const newActivityId = currentUser.departmentId * 100 + deptActivities.length + 1;
+    
+    mockDatabase.activitiesByDepartment[currentUser.departmentId].unshift({
+      id: newActivityId,
       type: 'category_delete',
       categoryName: category.name,
       user: currentUser?.name || 'admin',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      departmentId: currentUser.departmentId
     });
     
     return {
@@ -743,12 +1061,22 @@ export const checkDuplicates = async (fileList) => {
     //   body: JSON.stringify({ files: fileList })
     // });
     
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.departmentId) {
+      return {
+        success: false,
+        message: '未登入或無法識別所屬處室'
+      };
+    }
+    
+    const deptFiles = mockDatabase.filesByDepartment[currentUser.departmentId] || [];
+    
     const results = fileList.map(file => {
-      // 檢查完全重複（檔名相同）
-      const exactMatch = mockDatabase.files.find(f => f.name === file.name);
+      // 檢查完全重複（檔名相同）- 在該處室內
+      const exactMatch = deptFiles.find(f => f.name === file.name);
       
-      // 檢查可能相關（檔名相似度）
-      const relatedFiles = mockDatabase.files.filter(f => {
+      // 檢查可能相關（檔名相似度）- 在該處室內
+      const relatedFiles = deptFiles.filter(f => {
         const fileName = file.name.toLowerCase().replace(/\.[^/.]+$/, ''); // 移除副檔名
         const dbFileName = f.name.toLowerCase().replace(/\.[^/.]+$/, '');
         
@@ -789,8 +1117,8 @@ export const batchUpload = async (uploadData) => {
   await delay(500);
   
   try {
-    // 權限檢查：需要 manager 以上權限
-    const permission = checkPermission(ROLES.MANAGER);
+    // 權限檢查：需要 admin 權限
+    const permission = checkPermission(ROLES.ADMIN);
     if (!permission.hasPermission) {
       return {
         success: false,
@@ -875,28 +1203,42 @@ const processUploadTask = async (taskId, uploadData) => {
   const task = mockDatabase.uploadTasks[taskId];
   if (!task) return;
   
-  console.log('🚀 開始處理上傳任務:', taskId, '檔案數量:', uploadData.files.length);
-  
   // 更新任務狀態為處理中
   task.status = 'processing';
   
+  const currentUser = getCurrentUser();
+  const departmentId = currentUser?.departmentId;
+  
+  // 確保該處室的資料陣列存在
+  if (!mockDatabase.filesByDepartment[departmentId]) {
+    mockDatabase.filesByDepartment[departmentId] = [];
+  }
+  if (!mockDatabase.activitiesByDepartment[departmentId]) {
+    mockDatabase.activitiesByDepartment[departmentId] = [];
+  }
+  
   // 先刪除要移除的舊檔案
   if (uploadData.removeFileIds && uploadData.removeFileIds.length > 0) {
+    const deptFiles = mockDatabase.filesByDepartment[departmentId];
     for (const fileId of uploadData.removeFileIds) {
-      const fileIndex = mockDatabase.files.findIndex(f => f.id === fileId);
+      const fileIndex = deptFiles.findIndex(f => f.id === fileId);
       if (fileIndex !== -1) {
-        const deletedFile = mockDatabase.files[fileIndex];
-        mockDatabase.files.splice(fileIndex, 1);
+        const deletedFile = deptFiles[fileIndex];
+        mockDatabase.filesByDepartment[departmentId].splice(fileIndex, 1);
         
         // 增加刪除計數
         task.deletedFiles++;
         
-        mockDatabase.activities.unshift({
-          id: mockDatabase.activities.length + 1,
+        const deptActivities = mockDatabase.activitiesByDepartment[departmentId];
+        const newActivityId = departmentId * 100 + deptActivities.length + 1;
+        
+        mockDatabase.activitiesByDepartment[departmentId].unshift({
+          id: newActivityId,
           type: 'delete',
           fileName: deletedFile.name,
           user: task.userName,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          departmentId: departmentId
         });
       }
     }
@@ -918,7 +1260,6 @@ const processUploadTask = async (taskId, uploadData) => {
       for (let progress = 10; progress <= 100; progress += 10) {
         await delay(500); // 每 10% 延遲 500ms，單檔總時間約 5 秒
         fileTask.progress = progress;
-        console.log(`📁 ${file.name}: ${progress}%`);
       }
       
       // 模擬隨機失敗（10% 機率）
@@ -927,23 +1268,31 @@ const processUploadTask = async (taskId, uploadData) => {
       }
       
       // 成功：添加到資料庫
+      const deptFiles = mockDatabase.filesByDepartment[departmentId];
+      const newFileId = departmentId * 100 + deptFiles.length + 1;
+      
       const newFile = {
-        id: mockDatabase.files.length + 1,
+        id: newFileId,
         name: file.name,
         size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
         uploadDate: new Date().toISOString().split('T')[0],
         category: uploadData.categories[file.name] || '未分類',
-        uploader: task.userName
+        uploader: task.userName,
+        departmentId: departmentId
       };
       
-      mockDatabase.files.push(newFile);
+      mockDatabase.filesByDepartment[departmentId].push(newFile);
       
-      mockDatabase.activities.unshift({
-        id: mockDatabase.activities.length + 1,
+      const deptActivities = mockDatabase.activitiesByDepartment[departmentId];
+      const newActivityId = departmentId * 100 + deptActivities.length + 1;
+      
+      mockDatabase.activitiesByDepartment[departmentId].unshift({
+        id: newActivityId,
         type: 'upload',
         fileName: newFile.name,
         user: task.userName,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        departmentId: departmentId
       });
       
       fileTask.status = 'completed';
@@ -1104,12 +1453,22 @@ export const getUsers = async () => {
     //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
     // });
     
-    const users = mockDatabase.users.map(user => ({
+    // 根據使用者的 departmentId 過濾使用者
+    const currentUser = getCurrentUser();
+    let usersToShow = [...mockDatabase.users];
+    
+    // 如果是處室管理員,只顯示同處室的使用者
+    if (currentUser && currentUser.departmentId && currentUser.role !== 'super_admin') {
+      usersToShow = usersToShow.filter(u => u.departmentId === currentUser.departmentId);
+    }
+    
+    const users = usersToShow.map(user => ({
       id: user.id,
       name: user.name,
       username: user.username,
       email: user.email || user.username + '@example.com',
       role: user.role,
+      departmentId: user.departmentId,
       status: 'active'
     }));
     
@@ -1134,8 +1493,8 @@ export const addUser = async (userData) => {
   await delay(500);
   
   try {
-    // 權限檢查：需要 admin 權限
-    const permission = checkPermission(ROLES.ADMIN);
+    // 權限檢查：需要 super_admin 權限
+    const permission = checkPermission(ROLES.SUPER_ADMIN);
     if (!permission.hasPermission) {
       return {
         success: false,
@@ -1172,26 +1531,48 @@ export const addUser = async (userData) => {
       }
     }
     
+    // 驗證 departmentId
+    if (!userData.departmentId) {
+      return {
+        success: false,
+        message: '請選擇所屬處室'
+      };
+    }
+    
+    const department = mockDatabase.departments.find(d => d.id === parseInt(userData.departmentId));
+    if (!department) {
+      return {
+        success: false,
+        message: '所屬處室不存在'
+      };
+    }
+    
     // 新增使用者到 mockDatabase
+    const currentUser = getCurrentUser();
+    
     const newUser = {
       id: Date.now(),
       name: userData.name,
       username: userData.username,
       email: userData.email || userData.username + '@example.com',
-      password: userData.password || 'password123', // 預設密碼
-      role: userData.role || 'viewer',
+      password: userData.password || 'password123',
+      role: 'admin', // 系統管理員新增的都是處室管理員
+      departmentId: parseInt(userData.departmentId),
+      status: 'active',
       createdAt: new Date().toISOString()
     };
     
     mockDatabase.users.push(newUser);
     
-    // 記錄活動
-    const currentUser = getCurrentUser();
-    mockDatabase.activities.unshift({
-      id: mockDatabase.activities.length + 1,
+    // 記錄系統活動
+    mockDatabase.systemActivities.unshift({
+      id: Date.now(),
       type: 'user_add',
+      userId: newUser.id,
       userName: userData.name,
-      user: currentUser?.name || 'admin',
+      departmentId: newUser.departmentId,
+      departmentName: department.name,
+      user: currentUser?.name || 'superadmin',
       timestamp: new Date().toISOString()
     });
     
@@ -1203,6 +1584,7 @@ export const addUser = async (userData) => {
         username: newUser.username,
         email: newUser.email,
         role: newUser.role,
+        departmentId: newUser.departmentId,
         status: 'active'
       },
       message: '使用者新增成功'
@@ -1225,8 +1607,8 @@ export const updateUser = async (userId, userData) => {
   await delay(500);
   
   try {
-    // 權限檢查：需要 admin 權限
-    const permission = checkPermission(ROLES.ADMIN);
+    // 權限檢查：需要 super_admin 權限
+    const permission = checkPermission(ROLES.SUPER_ADMIN);
     if (!permission.hasPermission) {
       return {
         success: false,
@@ -1274,6 +1656,17 @@ export const updateUser = async (userId, userData) => {
       }
     }
     
+    // 驗證 departmentId
+    if (userData.departmentId) {
+      const department = mockDatabase.departments.find(d => d.id === parseInt(userData.departmentId));
+      if (!department) {
+        return {
+          success: false,
+          message: '所屬處室不存在'
+        };
+      }
+    }
+    
     // 更新使用者資料
     const oldUser = { ...mockDatabase.users[userIndex] };
     mockDatabase.users[userIndex] = {
@@ -1281,17 +1674,21 @@ export const updateUser = async (userId, userData) => {
       name: userData.name || mockDatabase.users[userIndex].name,
       username: userData.username || mockDatabase.users[userIndex].username,
       email: userData.email || mockDatabase.users[userIndex].email,
-      role: userData.role || mockDatabase.users[userIndex].role,
+      departmentId: userData.departmentId ? parseInt(userData.departmentId) : mockDatabase.users[userIndex].departmentId,
       ...(userData.password && { password: userData.password })
     };
     
-    // 記錄活動
+    // 記錄系統活動
     const currentUser = getCurrentUser();
-    mockDatabase.activities.unshift({
-      id: mockDatabase.activities.length + 1,
+    const department = mockDatabase.departments.find(d => d.id === mockDatabase.users[userIndex].departmentId);
+    mockDatabase.systemActivities.unshift({
+      id: Date.now(),
       type: 'user_update',
+      userId: userId,
       userName: mockDatabase.users[userIndex].name,
-      user: currentUser?.name || 'admin',
+      departmentId: mockDatabase.users[userIndex].departmentId,
+      departmentName: department?.name,
+      user: currentUser?.name || 'superadmin',
       timestamp: new Date().toISOString()
     });
     
@@ -1316,8 +1713,8 @@ export const deleteUser = async (userId) => {
   await delay(400);
   
   try {
-    // 權限檢查：需要 admin 權限
-    const permission = checkPermission(ROLES.ADMIN);
+    // 權限檢查：需要 super_admin 權限
+    const permission = checkPermission(ROLES.SUPER_ADMIN);
     if (!permission.hasPermission) {
       return {
         success: false,
@@ -1341,6 +1738,14 @@ export const deleteUser = async (userId) => {
     
     const user = mockDatabase.users[userIndex];
     
+    // 禁止刪除 super_admin
+    if (user.role === 'super_admin') {
+      return {
+        success: false,
+        message: '無法刪除系統管理員'
+      };
+    }
+    
     // 禁止刪除當前登入的使用者
     const currentUser = getCurrentUser();
     if (currentUser && currentUser.username === user.username) {
@@ -1353,12 +1758,16 @@ export const deleteUser = async (userId) => {
     // 從 mockDatabase 中刪除
     mockDatabase.users.splice(userIndex, 1);
     
-    // 記錄活動
-    mockDatabase.activities.unshift({
-      id: mockDatabase.activities.length + 1,
+    // 記錄系統活動
+    const department = mockDatabase.departments.find(d => d.id === user.departmentId);
+    mockDatabase.systemActivities.unshift({
+      id: Date.now(),
       type: 'user_delete',
+      userId: userId,
       userName: user.name,
-      user: currentUser?.name || 'admin',
+      departmentId: user.departmentId,
+      departmentName: department?.name,
+      user: currentUser?.name || 'superadmin',
       timestamp: new Date().toISOString()
     });
     
@@ -1410,8 +1819,8 @@ export const updateSettings = async (settings) => {
   await delay(500);
   
   try {
-    // 權限檢查：需要 admin 權限
-    const permission = checkPermission(ROLES.ADMIN);
+    // 權限檢查：需要 super_admin 權限
+    const permission = checkPermission(ROLES.SUPER_ADMIN);
     if (!permission.hasPermission) {
       return {
         success: false,
@@ -1431,14 +1840,7 @@ export const updateSettings = async (settings) => {
     // 更新 mockDatabase 中的設定
     mockDatabase.settings = { ...mockDatabase.settings, ...settings };
     
-    // 記錄活動
-    const currentUser = getCurrentUser();
-    mockDatabase.activities.unshift({
-      id: mockDatabase.activities.length + 1,
-      type: 'settings_update',
-      user: currentUser?.name || 'admin',
-      timestamp: new Date().toISOString()
-    });
+    // 記錄活動 - 不再記錄到 mockDatabase.activities (已移除)
     
     return {
       success: true,
@@ -1548,12 +1950,17 @@ export const getSystemInfo = async () => {
     const systemInfo = {
       version: '1.0.0',
       uptime: '15 天 8 小時',
-      totalFiles: mockDatabase.files.length,
-      totalSize: '45.6 GB',
-      apiCalls: 12450,
-      lastBackup: '2025-10-15 02:00',
-      storageUsed: 45.6,
-      storageTotal: 100
+      cpuUsage: 45,
+      memoryUsage: 62,
+      databaseSize: '2.3 GB',
+      cacheSize: '156 MB',
+      apiRequests: 12450,
+      errorRate: 0.5,
+      storage: {
+        used: '45.6 GB',
+        total: '100 GB',
+        percentage: 45.6
+      }
     };
     
     return {
@@ -1567,3 +1974,357 @@ export const getSystemInfo = async () => {
     };
   }
 };
+
+// ==================== 處室管理 API ====================
+
+/**
+ * 取得所有處室
+ * @returns {Promise} 處室列表
+ */
+export const getDepartments = async () => {
+  await delay(300);
+  
+  try {
+    // const response = await fetch(`${API_BASE_URL}/departments`, {
+    //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    // });
+    
+    const departments = mockDatabase.departments.map(dept => ({
+      ...dept,
+      userCount: mockDatabase.users.filter(u => u.departmentId === dept.id).length,
+      fileCount: (mockDatabase.filesByDepartment[dept.id] || []).length
+    }));
+    
+    return {
+      success: true,
+      data: departments
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: '獲取處室列表失敗'
+    };
+  }
+};
+
+/**
+ * 取得單一處室詳細資訊
+ * @param {number} departmentId - 處室 ID
+ * @returns {Promise} 處室詳細資訊
+ */
+export const getDepartmentById = async (departmentId) => {
+  await delay(300);
+  
+  try {
+    const dept = mockDatabase.departments.find(d => d.id === departmentId);
+    
+    if (!dept) {
+      return {
+        success: false,
+        message: '處室不存在'
+      };
+    }
+    
+    return {
+      success: true,
+      data: {
+        ...dept,
+        userCount: mockDatabase.users.filter(u => u.departmentId === dept.id).length,
+        fileCount: (mockDatabase.filesByDepartment[dept.id] || []).length
+      }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: '獲取處室資訊失敗'
+    };
+  }
+};
+
+/**
+ * 新增處室
+ * @param {Object} departmentData - 處室資料
+ * @returns {Promise} 新增結果
+ */
+export const addDepartment = async (departmentData) => {
+  await delay(500);
+  
+  try {
+    // 權限檢查：需要 super_admin 權限
+    const permission = checkPermission(ROLES.SUPER_ADMIN);
+    if (!permission.hasPermission) {
+      return {
+        success: false,
+        message: permission.message
+      };
+    }
+    
+    // 檢查處室名稱是否已存在
+    const exists = mockDatabase.departments.find(d => d.name === departmentData.name);
+    if (exists) {
+      return {
+        success: false,
+        message: '處室名稱已存在'
+      };
+    }
+    
+    // 新增處室
+    const newDepartment = {
+      id: Date.now(),
+      name: departmentData.name,
+      description: departmentData.description || '',
+      color: departmentData.color || 'blue',
+      createdAt: new Date().toISOString().split('T')[0],
+      settings: {
+        model: 'gpt-4',
+        temperature: 0.7,
+        maxTokens: 2000,
+        topP: 0.9,
+        tone: 'professional',
+        similarityThreshold: 0.75,
+        maxRetrievalDocs: 5,
+        autoCleanupDays: 90,
+        indexUpdateFrequency: 'daily',
+      }
+    };
+    
+    mockDatabase.departments.push(newDepartment);
+    
+    // 初始化該處室的資料結構
+    mockDatabase.filesByDepartment[newDepartment.id] = [];
+    mockDatabase.categoriesByDepartment[newDepartment.id] = [
+      { 
+        id: newDepartment.id * 100 + 1, 
+        name: '未分類', 
+        color: 'gray', 
+        createdAt: new Date().toISOString().split('T')[0],
+        departmentId: newDepartment.id
+      }
+    ];
+    mockDatabase.activitiesByDepartment[newDepartment.id] = [];
+    
+    // 記錄系統活動
+    const currentUser = getCurrentUser();
+    mockDatabase.systemActivities.unshift({
+      id: Date.now(),
+      type: 'department_add',
+      departmentId: newDepartment.id,
+      departmentName: newDepartment.name,
+      user: currentUser?.name || 'superadmin',
+      timestamp: new Date().toISOString()
+    });
+    
+    return {
+      success: true,
+      data: {
+        ...newDepartment,
+        userCount: 0,
+        fileCount: 0
+      },
+      message: '處室新增成功'
+    };
+  } catch (error) {
+    console.error('新增處室錯誤:', error);
+    return {
+      success: false,
+      message: '新增處室失敗'
+    };
+  }
+};
+
+/**
+ * 更新處室
+ * @param {number} departmentId - 處室 ID
+ * @param {Object} departmentData - 處室資料
+ * @returns {Promise} 更新結果
+ */
+export const updateDepartment = async (departmentId, departmentData) => {
+  await delay(500);
+  
+  try {
+    // 權限檢查：需要 super_admin 權限
+    const permission = checkPermission(ROLES.SUPER_ADMIN);
+    if (!permission.hasPermission) {
+      return {
+        success: false,
+        message: permission.message
+      };
+    }
+    
+    const deptIndex = mockDatabase.departments.findIndex(d => d.id === departmentId);
+    
+    if (deptIndex === -1) {
+      return {
+        success: false,
+        message: '處室不存在'
+      };
+    }
+    
+    // 如果要修改名稱，檢查是否與其他處室重複
+    if (departmentData.name && departmentData.name !== mockDatabase.departments[deptIndex].name) {
+      const exists = mockDatabase.departments.find(d => d.name === departmentData.name && d.id !== departmentId);
+      if (exists) {
+        return {
+          success: false,
+          message: '處室名稱已存在'
+        };
+      }
+    }
+    
+    // 更新處室資料
+    mockDatabase.departments[deptIndex] = {
+      ...mockDatabase.departments[deptIndex],
+      name: departmentData.name || mockDatabase.departments[deptIndex].name,
+      description: departmentData.description !== undefined ? departmentData.description : mockDatabase.departments[deptIndex].description,
+      color: departmentData.color || mockDatabase.departments[deptIndex].color,
+    };
+    
+    // 記錄系統活動
+    const currentUser = getCurrentUser();
+    mockDatabase.systemActivities.unshift({
+      id: Date.now(),
+      type: 'department_update',
+      departmentId: departmentId,
+      departmentName: mockDatabase.departments[deptIndex].name,
+      user: currentUser?.name || 'superadmin',
+      timestamp: new Date().toISOString()
+    });
+    
+    return {
+      success: true,
+      message: '處室更新成功'
+    };
+  } catch (error) {
+    console.error('更新處室錯誤:', error);
+    return {
+      success: false,
+      message: '更新處室失敗'
+    };
+  }
+};
+
+/**
+ * 刪除處室
+ * @param {number} departmentId - 處室 ID
+ * @returns {Promise} 刪除結果
+ */
+export const deleteDepartment = async (departmentId) => {
+  await delay(400);
+  
+  try {
+    // 權限檢查：需要 super_admin 權限
+    const permission = checkPermission(ROLES.SUPER_ADMIN);
+    if (!permission.hasPermission) {
+      return {
+        success: false,
+        message: permission.message
+      };
+    }
+    
+    const deptIndex = mockDatabase.departments.findIndex(d => d.id === departmentId);
+    
+    if (deptIndex === -1) {
+      return {
+        success: false,
+        message: '處室不存在'
+      };
+    }
+    
+    const dept = mockDatabase.departments[deptIndex];
+    
+    // 檢查是否有使用者屬於此處室
+    const usersInDept = mockDatabase.users.filter(u => u.departmentId === departmentId);
+    if (usersInDept.length > 0) {
+      return {
+        success: false,
+        message: `無法刪除，該處室還有 ${usersInDept.length} 位使用者`
+      };
+    }
+    
+    // 檢查是否有檔案屬於此處室
+    const filesInDept = mockDatabase.filesByDepartment[departmentId] || [];
+    if (filesInDept.length > 0) {
+      return {
+        success: false,
+        message: `無法刪除，該處室還有 ${filesInDept.length} 個檔案`
+      };
+    }
+    
+    // 刪除處室及其相關資料
+    mockDatabase.departments.splice(deptIndex, 1);
+    delete mockDatabase.filesByDepartment[departmentId];
+    delete mockDatabase.categoriesByDepartment[departmentId];
+    delete mockDatabase.activitiesByDepartment[departmentId];
+    
+    // 記錄系統活動
+    const currentUser = getCurrentUser();
+    mockDatabase.systemActivities.unshift({
+      id: Date.now(),
+      type: 'department_delete',
+      departmentId: departmentId,
+      departmentName: dept.name,
+      user: currentUser?.name || 'superadmin',
+      timestamp: new Date().toISOString()
+    });
+    
+    return {
+      success: true,
+      message: '處室刪除成功'
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: '刪除處室失敗'
+    };
+  }
+};
+
+/**
+ * 取得處室統計資料
+ * @param {number} departmentId - 處室 ID
+ * @returns {Promise} 處室統計資料
+ */
+export const getDepartmentStats = async (departmentId) => {
+  await delay(400);
+  
+  try {
+    const dept = mockDatabase.departments.find(d => d.id === departmentId);
+    
+    if (!dept) {
+      return {
+        success: false,
+        message: '處室不存在'
+      };
+    }
+    
+    // 從該處室的資料中取得統計
+    const deptFiles = mockDatabase.filesByDepartment[departmentId] || [];
+    const deptCategories = mockDatabase.categoriesByDepartment[departmentId] || [];
+    const deptActivities = mockDatabase.activitiesByDepartment[departmentId] || [];
+    const users = mockDatabase.users.filter(u => u.departmentId === departmentId);
+    
+    const stats = {
+      departmentName: dept.name,
+      totalFiles: deptFiles.length,
+      totalUsers: users.length,
+      filesByCategory: {},
+      recentActivities: deptActivities.slice(0, 5)
+    };
+    
+    // 計算各分類的檔案數量
+    deptCategories.forEach(cat => {
+      stats.filesByCategory[cat.name] = deptFiles.filter(f => f.category === cat.name).length;
+    });
+    
+    return {
+      success: true,
+      data: stats
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: '獲取處室統計資料失敗'
+    };
+  }
+};
+

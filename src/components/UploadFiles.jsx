@@ -20,6 +20,8 @@ const UploadFiles = ({ onNavigateToKnowledgeBase }) => {
   // UI 狀態
   const [currentStep, setCurrentStep] = useState(1); // 1: 選擇檔案, 2: 檢查重複, 3: 上傳中, 4: 結果摘要
   const [showSummary, setShowSummary] = useState(false);
+  const [isDragging, setIsDragging] = useState(false); // 拖曳狀態
+  const dragCounterRef = useRef(0); // 用於追蹤拖曳進入/離開的次數
   const fileInputRef = useRef(null);
   
   // 獲取當前使用者權限
@@ -33,7 +35,6 @@ const UploadFiles = ({ onNavigateToKnowledgeBase }) => {
   };
   
   const user = getUserInfo();
-  const isManager = user.role === 'manager' || user.role === 'admin'; // manager 以上可上傳
   
   // 載入分類列表
   useEffect(() => {
@@ -63,7 +64,16 @@ const UploadFiles = ({ onNavigateToKnowledgeBase }) => {
   // 處理檔案選擇
   const handleFileSelect = (event) => {
     const files = Array.from(event.target.files);
+    addFiles(files);
     
+    // 重置 input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+  
+  // 通用的加入檔案邏輯
+  const addFiles = (files) => {
     // 過濾掉已存在的檔案
     const newFiles = files.filter(file => 
       !selectedFiles.some(f => f.name === file.name && f.size === file.size)
@@ -81,11 +91,43 @@ const UploadFiles = ({ onNavigateToKnowledgeBase }) => {
       });
       setFileCategories(newCategories);
     }
-    
-    // 重置 input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+  };
+  
+  // 處理拖曳進入
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+    if (dragCounterRef.current === 1) {
+      setIsDragging(true);
     }
+  };
+  
+  // 處理拖曳經過
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  
+  // 處理拖曳離開
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false);
+    }
+  };
+  
+  // 處理拖曳放下
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current = 0;
+    setIsDragging(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    addFiles(files);
   };
   
   // 移除選中的檔案
@@ -175,13 +217,6 @@ const UploadFiles = ({ onNavigateToKnowledgeBase }) => {
     const response = await getUploadProgress(uploadTaskId);
     
     if (response.success) {
-      console.log('📊 進度更新:', {
-        status: response.data.status,
-        processedFiles: response.data.processedFiles,
-        totalFiles: response.data.totalFiles,
-        files: response.data.files.map(f => ({ name: f.name, status: f.status, progress: f.progress }))
-      });
-      
       setUploadProgress(response.data);
       
       // 檢查是否完成
@@ -282,30 +317,9 @@ const UploadFiles = ({ onNavigateToKnowledgeBase }) => {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">上傳檔案到知識庫</h1>
         <p className="mt-2 text-sm text-gray-600">
-          支援批次上傳多個檔案，系統會自動檢查重複並提供建議
+          支援批次上傳多個檔案,系統會自動檢查重複並提供建議
         </p>
       </div>
-      
-      {/* 權限檢查 */}
-      {!isManager ? (
-        <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl shadow-md p-8 text-center">
-          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-yellow-100 mx-auto mb-4">
-            <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">權限不足</h3>
-          <p className="text-gray-600 mb-4">
-            您目前的角色為「檢視者」，僅有查看權限。<br />
-            上傳檔案功能需要「主管」或「管理員」權限。
-          </p>
-          <p className="text-sm text-gray-500">
-            如需上傳檔案，請聯絡管理員提升您的帳戶權限。
-          </p>
-        </div>
-      ) : (
-        <>
       
       {/* 步驟指示器 */}
       <div className="bg-white rounded-xl shadow-md p-6">
@@ -381,14 +395,36 @@ const UploadFiles = ({ onNavigateToKnowledgeBase }) => {
       {currentStep === 1 && (
         <div className="space-y-6">
           {/* 檔案選擇器 */}
-          <div className="bg-white rounded-lg border-2 border-dashed border-gray-300 p-8 text-center hover:border-ncku-red transition-colors cursor-pointer shadow-sm"
-               onClick={() => fileInputRef.current?.click()}>
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div 
+            className={`rounded-lg border-2 border-dashed p-8 text-center transition-all cursor-pointer shadow-sm ${
+              isDragging 
+                ? 'bg-red-50' 
+                : 'bg-white hover:bg-gray-50'
+            }`}
+            style={{
+              borderColor: isDragging ? 'var(--ncku-red)' : '#d1d5db',
+            }}
+            onClick={() => fileInputRef.current?.click()}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <svg 
+              className="mx-auto h-12 w-12 transition-colors" 
+              style={{ color: isDragging ? 'var(--ncku-red)' : '#9ca3af' }}
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                     d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
-            <p className="mt-2 text-sm font-semibold text-gray-700">
-              點擊選擇檔案或拖曳檔案至此處
+            <p 
+              className="mt-2 text-sm font-semibold transition-colors"
+              style={{ color: isDragging ? 'var(--ncku-red)' : '#374151' }}
+            >
+              {isDragging ? '放開以加入檔案' : '點擊選擇檔案或拖曳檔案至此處'}
             </p>
             <p className="text-xs text-gray-500 mt-1">
               支援 PDF, DOC, DOCX, TXT 等格式，可多次選擇
@@ -841,8 +877,6 @@ const UploadFiles = ({ onNavigateToKnowledgeBase }) => {
             </button>
           </div>
         </div>
-      )}
-      </>
       )}
     </div>
   );

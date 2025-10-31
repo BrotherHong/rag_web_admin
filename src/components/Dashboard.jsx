@@ -6,17 +6,7 @@ import {
   getRecentActivities,
   getCategoriesWithDetails,
   addCategory,
-  deleteCategory,
-  getUsers,
-  addUser,
-  updateUser,
-  deleteUser,
-  getSettings,
-  updateSettings,
-  getBackupHistory,
-  createBackup,
-  restoreBackup,
-  getSystemInfo
+  deleteCategory
 } from '../services/api';
 import KnowledgeBase from './KnowledgeBase';
 import UploadFiles from './UploadFiles';
@@ -58,18 +48,48 @@ function Dashboard() {
   const getUserInfo = () => {
     try {
       const userStr = localStorage.getItem('user');
-      return userStr ? JSON.parse(userStr) : { name: '管理員', username: 'Admin', role: 'admin' };
+      return userStr ? JSON.parse(userStr) : { name: '管理員', username: 'Admin', role: 'admin', departmentId: null };
     } catch {
-      return { name: '管理員', username: 'Admin', role: 'admin' };
+      return { name: '管理員', username: 'Admin', role: 'admin', departmentId: null };
     }
   };
 
   const user = getUserInfo();
   
-  // 檢查權限
-  const isAdmin = user.role === 'admin';
-  const isManager = user.role === 'manager' || isAdmin;
-  const isViewer = user.role === 'viewer';
+  // 返回系統管理後台（當系統管理員代理時）
+  const returnToSuperAdmin = () => {
+    try {
+      const superAdminUserStr = localStorage.getItem('superAdminUser');
+      if (superAdminUserStr) {
+        const superAdminUser = JSON.parse(superAdminUserStr);
+        localStorage.setItem('user', JSON.stringify(superAdminUser));
+        localStorage.removeItem('superAdminUser');
+        
+        // 先導航，再非同步觸發事件，減少閃爍
+        navigate('/super-admin', { replace: true });
+        
+        // 使用 setTimeout 確保導航完成後再觸發事件
+        setTimeout(() => {
+          window.dispatchEvent(new Event('authChange'));
+        }, 0);
+      }
+    } catch (error) {
+      console.error('返回系統管理後台錯誤:', error);
+    }
+  };
+  
+  // 取得處室名稱
+  const getDepartmentName = () => {
+    // 如果是系統管理員代理，直接使用 departmentName
+    if (user.isSuperAdminProxy && user.departmentName) {
+      return user.departmentName;
+    }
+    
+    if (!user.departmentId) return '系統';
+    // 這裡可以從 API 取得處室名稱,為了簡化暫時hardcode
+    const deptNames = { 1: '人事室', 2: '會計室', 3: '總務處' };
+    return deptNames[user.departmentId] || '未知處室';
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -85,7 +105,7 @@ function Dashboard() {
                         d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 <div>
-                  <h1 className="text-xl font-bold">人事室 AI 客服</h1>
+                  <h1 className="text-xl font-bold">{getDepartmentName()} AI 客服</h1>
                   <p className="text-xs text-red-100">後台管理系統</p>
                 </div>
               </div>
@@ -96,15 +116,28 @@ function Dashboard() {
                 <p className="text-sm font-medium">{user.name}</p>
                 <div className="flex items-center justify-end space-x-2">
                   <p className="text-xs text-red-100">{user.username}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                    user.role === 'manager' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {user.role === 'admin' ? '管理員' : user.role === 'manager' ? '主管' : '檢視者'}
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                    管理員
                   </span>
+                  {user.isSuperAdminProxy && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
+                      系統管理員代理
+                    </span>
+                  )}
                 </div>
               </div>
+              {user.isSuperAdminProxy && (
+                <button
+                  onClick={returnToSuperAdmin}
+                  className="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors flex items-center space-x-2 cursor-pointer"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                          d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  <span>返回系統管理</span>
+                </button>
+              )}
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
@@ -184,20 +217,19 @@ function Dashboard() {
             </button>
 
             <button
-              onClick={() => setCurrentPage('settings')}
+              onClick={() => setCurrentPage('categories')}
               className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all cursor-pointer ${
-                currentPage === 'settings'
+                currentPage === 'categories'
                   ? 'text-white shadow-lg'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
-              style={currentPage === 'settings' ? { backgroundColor: 'var(--ncku-red)' } : {}}
+              style={currentPage === 'categories' ? { backgroundColor: 'var(--ncku-red)' } : {}}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
               </svg>
-              <span className="font-medium">系統設定</span>
+              <span className="font-medium">分類管理</span>
             </button>
           </nav>
 
@@ -221,7 +253,7 @@ function Dashboard() {
             />
           )}
           {currentPage === 'dashboard' && <DashboardHome />}
-          {currentPage === 'settings' && <Settings />}
+          {currentPage === 'categories' && <CategoryManagement />}
         </main>
       </div>
     </div>
@@ -249,13 +281,35 @@ function DashboardHome() {
 
       if (statsResponse.success) {
         setStats(statsResponse.data);
+      } else {
+        // API 調用失敗時,設定一個空的預設值而不是 null
+        console.error('獲取統計資料失敗:', statsResponse.message);
+        setStats({
+          totalFiles: 0,
+          filesByCategory: {},
+          monthlyQueries: 0,
+          systemStatus: { status: 'unknown', message: '無法獲取系統狀態' },
+          storageUsed: '0 GB',
+          storageTotal: '100 GB'
+        });
       }
 
       if (activitiesResponse.success) {
         setActivities(activitiesResponse.data);
+      } else {
+        console.error('獲取活動記錄失敗:', activitiesResponse.message);
       }
     } catch (error) {
       console.error('載入儀表板資料錯誤:', error);
+      // 發生異常時也設定預設值
+      setStats({
+        totalFiles: 0,
+        filesByCategory: {},
+        monthlyQueries: 0,
+        systemStatus: { status: 'error', message: '載入失敗' },
+        storageUsed: '0 GB',
+        storageTotal: '100 GB'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -402,7 +456,21 @@ function DashboardHome() {
   if (!stats) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-600">無法載入儀表板資料</p>
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-50 mb-4">
+          <svg className="w-8 h-8" style={{ color: 'var(--ncku-red)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <p className="text-gray-800 font-medium mb-2">無法載入儀表板資料</p>
+        <p className="text-gray-600 text-sm mb-4">請確認您的帳號已正確登入並分配到處室</p>
+        <button 
+          onClick={loadDashboardData}
+          className="px-4 py-2 rounded-lg text-white hover:opacity-90 transition-opacity"
+          style={{ backgroundColor: 'var(--ncku-red)' }}
+        >
+          重新載入
+        </button>
       </div>
     );
   }
@@ -449,7 +517,8 @@ function DashboardHome() {
             <div>
               <p className="text-gray-600 text-sm">系統狀態</p>
               <p className="text-xl font-bold mt-2 text-green-600">
-                {stats.systemStatus === 'running' ? '運行正常' : '異常'}
+                {stats.systemStatus?.status === 'running' ? '運行正常' : 
+                 stats.systemStatus?.status === 'unknown' ? '未知' : '異常'}
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -529,374 +598,8 @@ function DashboardHome() {
   );
 }
 
-// 設定頁面組件
-function Settings() {
-  const [activeTab, setActiveTab] = useState('ai-model');
-  const [settings, setSettings] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // 獲取當前使用者權限
-  const getUserInfo = () => {
-    try {
-      const userStr = localStorage.getItem('user');
-      return userStr ? JSON.parse(userStr) : { name: '管理員', username: 'Admin', role: 'admin' };
-    } catch {
-      return { name: '管理員', username: 'Admin', role: 'admin' };
-    }
-  };
-  
-  const user = getUserInfo();
-  const isAdmin = user.role === 'admin';
-
-  // 載入設定
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
-    setIsLoading(true);
-    try {
-      const response = await getSettings();
-      if (response.success) {
-        setSettings(response.data);
-      } else {
-        console.error('載入設定失敗:', response.message);
-        // 使用預設值
-        setSettings({
-          model: 'gpt-4',
-          temperature: 0.7,
-          maxTokens: 2000,
-          topP: 0.9,
-          tone: 'professional',
-          similarityThreshold: 0.75,
-          maxRetrievalDocs: 5,
-          autoCleanupDays: 90,
-          indexUpdateFrequency: 'daily',
-          emailNotifications: true,
-          uploadSuccessNotif: true,
-          uploadFailNotif: true,
-          storageWarning: true,
-          weeklyReport: false,
-          autoBackup: true,
-          backupFrequency: 'weekly',
-        });
-      }
-    } catch (error) {
-      console.error('載入設定錯誤:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSettingChange = (key, value) => {
-    setSettings(prev => ({
-      ...prev,
-      [key]: value
-    }));
-  };
-
-  const handleSave = async () => {
-    try {
-      const response = await updateSettings(settings);
-      if (response.success) {
-        alert('設定已儲存！');
-      } else {
-        alert('儲存失敗：' + response.message);
-      }
-    } catch (error) {
-      console.error('儲存設定錯誤:', error);
-      alert('儲存設定失敗');
-    }
-  };
-
-  if (isLoading || !settings) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-solid border-current border-r-transparent"
-               style={{ color: 'var(--ncku-red)' }}>
-          </div>
-          <p className="mt-4 text-gray-600">載入設定中...</p>
-        </div>
-      </div>
-    );
-  }
-
-  const tabs = [
-    { id: 'ai-model', name: 'AI 模型', icon: '🤖' },
-    { id: 'knowledge-base', name: '知識庫', icon: '📚' },
-    { id: 'categories', name: '分類管理', icon: '🏷️' },
-    { id: 'users', name: '使用者', icon: '👥' },
-    { id: 'notifications', name: '通知', icon: '🔔' },
-    { id: 'backup', name: '備份', icon: '💾' },
-    { id: 'system', name: '系統資訊', icon: '📊' },
-  ];
-
-  return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--ncku-red)' }}>
-        系統設定
-      </h2>
-      
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* 側邊欄標籤 */}
-        <div className="w-full lg:w-64 flex-shrink-0">
-          <div className="bg-white rounded-xl shadow-md overflow-hidden">
-            {/* 小螢幕：橫向滾動標籤 */}
-            <div className="lg:hidden flex overflow-x-auto">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-4 py-3 text-sm whitespace-nowrap flex items-center space-x-2 transition-colors cursor-pointer ${
-                    activeTab === tab.id
-                      ? 'text-white'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                  style={activeTab === tab.id ? { backgroundColor: 'var(--ncku-red)' } : {}}
-                >
-                  <span>{tab.icon}</span>
-                  <span className="font-medium">{tab.name}</span>
-                </button>
-              ))}
-            </div>
-            
-            {/* 大螢幕：垂直標籤 */}
-            <div className="hidden lg:block">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full px-6 py-4 text-left flex items-center space-x-3 transition-colors cursor-pointer ${
-                    activeTab === tab.id
-                      ? 'text-white'
-                      : 'text-gray-700 hover:bg-gray-50'
-                  }`}
-                  style={activeTab === tab.id ? { backgroundColor: 'var(--ncku-red)' } : {}}
-                >
-                  <span className="text-xl">{tab.icon}</span>
-                  <span className="font-medium">{tab.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* 內容區域 */}
-        <div className="flex-1 min-w-0">
-          <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 lg:p-8">
-            {activeTab === 'ai-model' && <AIModelSettings settings={settings} onChange={handleSettingChange} />}
-            {activeTab === 'knowledge-base' && <KnowledgeBaseSettings settings={settings} onChange={handleSettingChange} />}
-            {activeTab === 'categories' && <CategoryManagement isAdmin={isAdmin} />}
-            {activeTab === 'users' && <UserManagement isAdmin={isAdmin} />}
-            {activeTab === 'notifications' && <NotificationSettings settings={settings} onChange={handleSettingChange} />}
-            {activeTab === 'backup' && <BackupSettings settings={settings} onChange={handleSettingChange} />}
-            {activeTab === 'system' && <SystemInfo />}
-          </div>
-
-          {/* 儲存按鈕 */}
-          {activeTab !== 'categories' && activeTab !== 'users' && activeTab !== 'system' && (
-            <div className="mt-6 flex justify-end">
-              {isAdmin ? (
-                <button
-                  onClick={handleSave}
-                  className="px-8 py-3 text-white rounded-lg shadow-lg hover:shadow-xl transition-all cursor-pointer font-medium"
-                  style={{ backgroundColor: 'var(--ncku-red)' }}
-                >
-                  儲存設定
-                </button>
-              ) : (
-                <div className="text-sm text-gray-500 bg-gray-100 px-6 py-3 rounded-lg">
-                  僅管理員可修改設定
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// AI 模型設定子組件
-function AIModelSettings({ settings, onChange }) {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">AI 模型設定</h3>
-        <p className="text-sm text-gray-600 mb-6">調整 AI 模型的參數以優化回答品質</p>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            模型選擇
-          </label>
-          <select
-            value={settings.model}
-            onChange={(e) => onChange('model', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ncku-red focus:border-transparent cursor-pointer"
-          >
-            <option value="gpt-4">GPT-4 (最佳品質)</option>
-            <option value="gpt-4-turbo">GPT-4 Turbo (快速)</option>
-            <option value="gpt-3.5-turbo">GPT-3.5 Turbo (經濟)</option>
-            <option value="claude-3">Claude 3</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            溫度參數 (Temperature): {settings.temperature}
-          </label>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={settings.temperature}
-            onChange={(e) => onChange('temperature', parseFloat(e.target.value))}
-            className="w-full cursor-pointer"
-          />
-          <div className="flex justify-between text-xs text-gray-500 mt-1">
-            <span>保守 (0)</span>
-            <span>創意 (1)</span>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            最大 Token 數
-          </label>
-          <input
-            type="number"
-            value={settings.maxTokens}
-            onChange={(e) => onChange('maxTokens', parseInt(e.target.value))}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ncku-red focus:border-transparent"
-            min="100"
-            max="4000"
-          />
-          <p className="text-xs text-gray-500 mt-1">控制回答的最大長度 (100-4000)</p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Top-P 參數: {settings.topP}
-          </label>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={settings.topP}
-            onChange={(e) => onChange('topP', parseFloat(e.target.value))}
-            className="w-full cursor-pointer"
-          />
-          <p className="text-xs text-gray-500 mt-1">控制回答的多樣性</p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            回答語氣
-          </label>
-          <select
-            value={settings.tone}
-            onChange={(e) => onChange('tone', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ncku-red focus:border-transparent cursor-pointer"
-          >
-            <option value="professional">專業正式</option>
-            <option value="friendly">親切友善</option>
-            <option value="concise">簡潔明瞭</option>
-            <option value="detailed">詳細說明</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// 知識庫設定子組件
-function KnowledgeBaseSettings({ settings, onChange }) {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">知識庫設定</h3>
-        <p className="text-sm text-gray-600 mb-6">配置知識庫的檢索和管理參數</p>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            相似度閾值: {settings.similarityThreshold}
-          </label>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.05"
-            value={settings.similarityThreshold}
-            onChange={(e) => onChange('similarityThreshold', parseFloat(e.target.value))}
-            className="w-full cursor-pointer"
-          />
-          <div className="flex justify-between text-xs text-gray-500 mt-1">
-            <span>寬鬆 (0)</span>
-            <span>嚴格 (1)</span>
-          </div>
-          <p className="text-xs text-gray-500 mt-1">設定文件匹配的最低相似度</p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            最大檢索文件數
-          </label>
-          <input
-            type="number"
-            value={settings.maxRetrievalDocs}
-            onChange={(e) => onChange('maxRetrievalDocs', parseInt(e.target.value))}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ncku-red focus:border-transparent"
-            min="1"
-            max="20"
-          />
-          <p className="text-xs text-gray-500 mt-1">每次查詢返回的文件數量 (1-20)</p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            自動清理天數
-          </label>
-          <input
-            type="number"
-            value={settings.autoCleanupDays}
-            onChange={(e) => onChange('autoCleanupDays', parseInt(e.target.value))}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ncku-red focus:border-transparent"
-            min="30"
-            max="365"
-          />
-          <p className="text-xs text-gray-500 mt-1">自動刪除多久未使用的檔案 (0 = 停用)</p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            索引更新頻率
-          </label>
-          <select
-            value={settings.indexUpdateFrequency}
-            onChange={(e) => onChange('indexUpdateFrequency', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ncku-red focus:border-transparent cursor-pointer"
-          >
-            <option value="realtime">即時更新</option>
-            <option value="hourly">每小時</option>
-            <option value="daily">每天</option>
-            <option value="weekly">每週</option>
-          </select>
-          <p className="text-xs text-gray-500 mt-1">向量資料庫索引的更新頻率</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// 分類管理子組件
-function CategoryManagement({ isAdmin }) {
+// 分類管理頁面組件
+function CategoryManagement() {
   const [categories, setCategories] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -1009,20 +712,13 @@ function CategoryManagement({ isAdmin }) {
           <h3 className="text-lg font-semibold">分類管理</h3>
           <p className="text-sm text-gray-600 mt-1">管理知識庫的檔案分類</p>
         </div>
-        {isAdmin && (
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 text-white rounded-lg shadow hover:shadow-lg transition-all cursor-pointer"
-            style={{ backgroundColor: 'var(--ncku-red)' }}
-          >
-            + 新增分類
-          </button>
-        )}
-        {!isAdmin && (
-          <div className="text-sm text-gray-500 bg-gray-100 px-4 py-2 rounded-lg">
-            僅管理員可新增分類
-          </div>
-        )}
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="px-4 py-2 text-white rounded-lg shadow hover:shadow-lg transition-all cursor-pointer"
+          style={{ backgroundColor: 'var(--ncku-red)' }}
+        >
+          + 新增分類
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1041,7 +737,7 @@ function CategoryManagement({ isAdmin }) {
                   <p className="text-sm text-gray-500">{category.count} 個檔案</p>
                 </div>
               </div>
-              {category.name !== '未分類' && isAdmin && (
+              {category.name !== '未分類' && (
                 <button
                   onClick={() => handleDeleteCategory(category.id)}
                   className="text-red-600 hover:text-red-800 cursor-pointer"
@@ -1124,831 +820,6 @@ function CategoryManagement({ isAdmin }) {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// 使用者管理子組件
-function UserManagement({ isAdmin }) {
-  const [users, setUsers] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
-  const [editingUser, setEditingUser] = useState(null);
-  
-  // 表單狀態
-  const [formData, setFormData] = useState({
-    name: '',
-    username: '',
-    email: '',
-    password: '',
-    role: 'viewer'
-  });
-
-  // 載入使用者列表
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  const loadUsers = async () => {
-    setIsLoading(true);
-    try {
-      const response = await getUsers();
-      if (response.success) {
-        setUsers(response.data);
-      } else {
-        console.error('載入使用者失敗:', response.message);
-      }
-    } catch (error) {
-      console.error('載入使用者錯誤:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // 處理新增使用者
-  const handleAddUser = async () => {
-    if (!formData.name.trim() || !formData.username.trim() || !formData.email.trim() || !formData.password.trim()) {
-      alert('請填寫所有必填欄位');
-      return;
-    }
-
-    try {
-      const response = await addUser(formData);
-      if (response.success) {
-        await loadUsers();
-        setShowAddModal(false);
-        resetForm();
-      } else {
-        alert('新增失敗：' + response.message);
-      }
-    } catch (error) {
-      console.error('新增使用者錯誤:', error);
-      alert('新增使用者失敗');
-    }
-  };
-
-  // 處理編輯使用者
-  const handleEditUser = async () => {
-    if (!formData.name.trim() || !formData.username.trim() || !formData.email.trim()) {
-      alert('請填寫所有必填欄位');
-      return;
-    }
-
-    try {
-      const updateData = {
-        name: formData.name,
-        username: formData.username,
-        email: formData.email,
-        role: formData.role
-      };
-      
-      // 只有填寫密碼時才更新密碼
-      if (formData.password.trim()) {
-        updateData.password = formData.password;
-      }
-
-      const response = await updateUser(editingUser.id, updateData);
-      if (response.success) {
-        await loadUsers();
-        setShowEditModal(false);
-        setEditingUser(null);
-        resetForm();
-      } else {
-        alert('更新失敗：' + response.message);
-      }
-    } catch (error) {
-      console.error('更新使用者錯誤:', error);
-      alert('更新使用者失敗');
-    }
-  };
-
-  // 處理刪除使用者
-  const handleDeleteUser = async (userId) => {
-    try {
-      const response = await deleteUser(userId);
-      if (response.success) {
-        await loadUsers();
-        setShowDeleteConfirm(null);
-      } else {
-        alert('刪除失敗：' + response.message);
-      }
-    } catch (error) {
-      console.error('刪除使用者錯誤:', error);
-      alert('刪除使用者失敗');
-    }
-  };
-
-  // 開啟編輯對話框
-  const openEditModal = (user) => {
-    setEditingUser(user);
-    setFormData({
-      name: user.name,
-      username: user.username,
-      email: user.email,
-      password: '', // 編輯時不顯示密碼
-      role: user.role
-    });
-    setShowEditModal(true);
-  };
-
-  // 重置表單
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      username: '',
-      email: '',
-      password: '',
-      role: 'viewer'
-    });
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-solid border-current border-r-transparent"
-               style={{ color: 'var(--ncku-red)' }}>
-          </div>
-          <p className="mt-4 text-gray-600">載入中...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <h3 className="text-lg font-semibold">使用者管理</h3>
-          <p className="text-sm text-gray-600 mt-1">管理系統管理員帳號</p>
-        </div>
-        {isAdmin ? (
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 text-white rounded-lg shadow hover:shadow-lg transition-all cursor-pointer w-full sm:w-auto"
-            style={{ backgroundColor: 'var(--ncku-red)' }}
-          >
-            + 新增使用者
-          </button>
-        ) : (
-          <div className="text-sm text-gray-500 bg-gray-100 px-4 py-2 rounded-lg text-center sm:text-left">
-            僅管理員可新增使用者
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">姓名</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">帳號</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap hidden md:table-cell">Email</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">角色</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">狀態</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">操作</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {users.map(user => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{user.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{user.username}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap hidden md:table-cell">{user.email}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                      user.role === 'manager' ? 'bg-blue-100 text-blue-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {user.role === 'admin' ? '管理員' : user.role === 'manager' ? '主管' : '檢視者'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {user.status === 'active' ? '啟用' : '停用'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm whitespace-nowrap">
-                    {isAdmin ? (
-                      <>
-                        <button 
-                          onClick={() => openEditModal(user)}
-                          className="text-blue-600 hover:text-blue-800 mr-2 sm:mr-3 cursor-pointer"
-                        >
-                          編輯
-                        </button>
-                        <button 
-                          onClick={() => setShowDeleteConfirm(user)}
-                          className="text-red-600 hover:text-red-800 cursor-pointer"
-                        >
-                          刪除
-                        </button>
-                      </>
-                    ) : (
-                      <span className="text-gray-400 text-xs">無權限</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* 小螢幕提示 */}
-      <div className="md:hidden text-sm text-gray-500 text-center">
-        <p>💡 向左滑動查看更多資訊</p>
-      </div>
-
-      {/* 新增使用者對話框 */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 animate-scaleIn">
-            <h3 className="text-lg font-semibold mb-4">新增使用者</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">姓名 *</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
-                  placeholder="請輸入姓名"
-                  style={{ focusRing: 'var(--ncku-red)' }}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">帳號 *</label>
-                <input
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
-                  placeholder="請輸入帳號"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
-                  placeholder="請輸入 Email"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">密碼 *</label>
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
-                  placeholder="請輸入密碼"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">角色</label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none cursor-pointer"
-                >
-                  <option value="admin">管理員</option>
-                  <option value="manager">主管</option>
-                  <option value="viewer">檢視者</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowAddModal(false);
-                  resetForm();
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleAddUser}
-                disabled={!formData.name.trim() || !formData.username.trim() || !formData.email.trim() || !formData.password.trim()}
-                className="px-4 py-2 text-white rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: 'var(--ncku-red)' }}
-              >
-                新增
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 編輯使用者對話框 */}
-      {showEditModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 animate-scaleIn">
-            <h3 className="text-lg font-semibold mb-4">編輯使用者</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">姓名 *</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
-                  placeholder="請輸入姓名"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">帳號 *</label>
-                <input
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
-                  placeholder="請輸入帳號"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
-                  placeholder="請輸入 Email"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">新密碼</label>
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
-                  placeholder="留空則不修改密碼"
-                />
-                <p className="text-xs text-gray-500 mt-1">留空則保持原密碼不變</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">角色</label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none cursor-pointer"
-                >
-                  <option value="admin">管理員</option>
-                  <option value="manager">主管</option>
-                  <option value="viewer">檢視者</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowEditModal(false);
-                  setEditingUser(null);
-                  resetForm();
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleEditUser}
-                disabled={!formData.name.trim() || !formData.username.trim() || !formData.email.trim()}
-                className="px-4 py-2 text-white rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: 'var(--ncku-red)' }}
-              >
-                更新
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 刪除確認對話框 */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
-          <div className="bg-white rounded-lg p-6 w-full max-w-sm mx-4 animate-scaleIn">
-            <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 rounded-full bg-red-100">
-              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-center mb-2">確認刪除</h3>
-            <p className="text-gray-600 text-center mb-6">
-              確定要刪除使用者「{showDeleteConfirm.name}」嗎？此操作無法復原。
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowDeleteConfirm(null)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
-              >
-                取消
-              </button>
-              <button
-                onClick={() => handleDeleteUser(showDeleteConfirm.id)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 cursor-pointer"
-              >
-                刪除
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// 通知設定子組件
-function NotificationSettings({ settings, onChange }) {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">通知設定</h3>
-        <p className="text-sm text-gray-600 mb-6">管理系統通知和警告</p>
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-          <div>
-            <p className="font-medium text-gray-900">Email 通知</p>
-            <p className="text-sm text-gray-500">啟用 Email 通知功能</p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={settings.emailNotifications}
-              onChange={(e) => onChange('emailNotifications', e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-ncku-red"
-              style={settings.emailNotifications ? { backgroundColor: 'var(--ncku-red)' } : {}}
-            ></div>
-          </label>
-        </div>
-
-        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-          <div>
-            <p className="font-medium text-gray-900">上傳成功通知</p>
-            <p className="text-sm text-gray-500">檔案上傳成功時發送通知</p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={settings.uploadSuccessNotif}
-              onChange={(e) => onChange('uploadSuccessNotif', e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-ncku-red"
-              style={settings.uploadSuccessNotif ? { backgroundColor: 'var(--ncku-red)' } : {}}
-            ></div>
-          </label>
-        </div>
-
-        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-          <div>
-            <p className="font-medium text-gray-900">上傳失敗通知</p>
-            <p className="text-sm text-gray-500">檔案上傳失敗時發送通知</p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={settings.uploadFailNotif}
-              onChange={(e) => onChange('uploadFailNotif', e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-ncku-red"
-              style={settings.uploadFailNotif ? { backgroundColor: 'var(--ncku-red)' } : {}}
-            ></div>
-          </label>
-        </div>
-
-        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-          <div>
-            <p className="font-medium text-gray-900">儲存空間警告</p>
-            <p className="text-sm text-gray-500">儲存空間不足時發送警告</p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={settings.storageWarning}
-              onChange={(e) => onChange('storageWarning', e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-ncku-red"
-              style={settings.storageWarning ? { backgroundColor: 'var(--ncku-red)' } : {}}
-            ></div>
-          </label>
-        </div>
-
-        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-          <div>
-            <p className="font-medium text-gray-900">每週報告</p>
-            <p className="text-sm text-gray-500">每週發送使用統計報告</p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={settings.weeklyReport}
-              onChange={(e) => onChange('weeklyReport', e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-ncku-red"
-              style={settings.weeklyReport ? { backgroundColor: 'var(--ncku-red)' } : {}}
-            ></div>
-          </label>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// 備份設定子組件
-function BackupSettings({ settings, onChange }) {
-  const [backupHistory, setBackupHistory] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
-
-  // 載入備份歷史
-  useEffect(() => {
-    loadBackupHistory();
-  }, []);
-
-  const loadBackupHistory = async () => {
-    setIsLoading(true);
-    try {
-      const response = await getBackupHistory();
-      if (response.success) {
-        setBackupHistory(response.data);
-      } else {
-        console.error('載入備份歷史失敗:', response.message);
-      }
-    } catch (error) {
-      console.error('載入備份歷史錯誤:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCreateBackup = async () => {
-    if (confirm('確定要建立新的備份嗎？')) {
-      setIsCreatingBackup(true);
-      try {
-        const response = await createBackup();
-        if (response.success) {
-          alert('備份建立成功！');
-          await loadBackupHistory();
-        } else {
-          alert('備份失敗：' + response.message);
-        }
-      } catch (error) {
-        console.error('建立備份錯誤:', error);
-        alert('建立備份失敗');
-      } finally {
-        setIsCreatingBackup(false);
-      }
-    }
-  };
-
-  const handleRestore = async (backupId) => {
-    if (confirm('確定要還原此備份嗎？這將覆蓋目前的所有資料！')) {
-      try {
-        const response = await restoreBackup(backupId);
-        if (response.success) {
-          alert('備份還原成功！');
-        } else {
-          alert('還原失敗：' + response.message);
-        }
-      } catch (error) {
-        console.error('還原備份錯誤:', error);
-        alert('還原備份失敗');
-      }
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">備份設定</h3>
-        <p className="text-sm text-gray-600 mb-6">管理資料備份和還原</p>
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-          <div>
-            <p className="font-medium text-gray-900">自動備份</p>
-            <p className="text-sm text-gray-500">啟用自動備份功能</p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={settings.autoBackup}
-              onChange={(e) => onChange('autoBackup', e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-ncku-red"
-              style={settings.autoBackup ? { backgroundColor: 'var(--ncku-red)' } : {}}
-            ></div>
-          </label>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            備份頻率
-          </label>
-          <select
-            value={settings.backupFrequency}
-            onChange={(e) => onChange('backupFrequency', e.target.value)}
-            disabled={!settings.autoBackup}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ncku-red focus:border-transparent cursor-pointer disabled:bg-gray-100"
-          >
-            <option value="daily">每天</option>
-            <option value="weekly">每週</option>
-            <option value="monthly">每月</option>
-          </select>
-        </div>
-
-        <div className="pt-4">
-          <button
-            onClick={handleCreateBackup}
-            disabled={isCreatingBackup}
-            className="w-full px-4 py-3 text-white rounded-lg shadow hover:shadow-lg transition-all cursor-pointer font-medium disabled:opacity-50"
-            style={{ backgroundColor: 'var(--ncku-red)' }}
-          >
-            {isCreatingBackup ? '建立中...' : '立即建立備份'}
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <h4 className="font-semibold mb-3">備份歷史</h4>
-        {isLoading ? (
-          <div className="text-center py-4">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-solid border-current border-r-transparent"
-                 style={{ color: 'var(--ncku-red)' }}>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {backupHistory.map(backup => (
-              <div key={backup.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                <div className="flex items-center space-x-3">
-                  <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{backup.date}</p>
-                    <p className="text-xs text-gray-500">{backup.size}</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => handleRestore(backup.id)}
-                  className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
-                >
-                  還原
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// 系統資訊子組件
-function SystemInfo() {
-  const [systemStats, setSystemStats] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // 載入系統資訊
-  useEffect(() => {
-    loadSystemInfo();
-  }, []);
-
-  const loadSystemInfo = async () => {
-    setIsLoading(true);
-    try {
-      const response = await getSystemInfo();
-      if (response.success) {
-        setSystemStats(response.data);
-      } else {
-        console.error('載入系統資訊失敗:', response.message);
-      }
-    } catch (error) {
-      console.error('載入系統資訊錯誤:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (isLoading || !systemStats) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-solid border-current border-r-transparent"
-               style={{ color: 'var(--ncku-red)' }}>
-          </div>
-          <p className="mt-4 text-gray-600">載入中...</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">系統資訊</h3>
-        <p className="text-sm text-gray-600 mb-6">查看系統運行狀態和統計資料</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">系統版本</p>
-            <p className="text-lg font-semibold">{systemStats.version}</p>
-          </div>
-        </div>
-
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">運行時間</p>
-            <p className="text-lg font-semibold">{systemStats.uptime}</p>
-          </div>
-        </div>
-
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">總檔案數</p>
-            <p className="text-lg font-semibold">{systemStats.totalFiles}</p>
-          </div>
-        </div>
-
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">檔案總大小</p>
-            <p className="text-lg font-semibold">{systemStats.totalSize}</p>
-          </div>
-        </div>
-
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">本月 API 呼叫</p>
-            <p className="text-lg font-semibold">{systemStats.apiCalls.toLocaleString()}</p>
-          </div>
-        </div>
-
-        <div className="border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">最後備份</p>
-            <p className="text-lg font-semibold">{systemStats.lastBackup}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="border border-gray-200 rounded-lg p-4">
-        <p className="text-sm text-gray-600 mb-3">儲存空間使用率</p>
-        <div className="flex items-center space-x-4">
-          <div className="flex-1">
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div
-                className="h-3 rounded-full transition-all"
-                style={{
-                  width: `${(12.5 / 100) * 100}%`,
-                  backgroundColor: 'var(--ncku-red)'
-                }}
-              ></div>
-            </div>
-          </div>
-          <p className="text-sm font-semibold whitespace-nowrap">
-            {systemStats.storageUsed} / {systemStats.storageTotal}
-          </p>
-        </div>
-        <p className="text-xs text-gray-500 mt-2">
-          使用 {((12.5 / 100) * 100).toFixed(1)}% 的可用空間
-        </p>
-      </div>
     </div>
   );
 }

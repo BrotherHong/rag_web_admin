@@ -2,16 +2,31 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
+import SuperAdminDashboard from './components/SuperAdminDashboard';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 檢查本地存儲的登入狀態
+  // 檢查本地存儲的登入狀態和角色
   useEffect(() => {
     const checkAuth = () => {
       const authStatus = localStorage.getItem('isAuthenticated');
+      const userStr = localStorage.getItem('user');
+      
       setIsAuthenticated(authStatus === 'true');
+      
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          setUserRole(user.role);
+        } catch {
+          setUserRole(null);
+        }
+      } else {
+        setUserRole(null);
+      }
     };
 
     checkAuth();
@@ -32,8 +47,9 @@ function App() {
     };
   }, []);
 
-  const handleLogin = (status) => {
+  const handleLogin = (status, role) => {
     setIsAuthenticated(status);
+    setUserRole(role);
   };
 
   if (isLoading) {
@@ -56,16 +72,31 @@ function App() {
           path="/" 
           element={
             isAuthenticated ? (
-              <Navigate to="/dashboard" replace />
+              // 根據使用者角色導向不同的管理頁面
+              userRole === 'super_admin' ? (
+                <Navigate to="/super-admin" replace />
+              ) : (
+                <Navigate to="/dashboard" replace />
+              )
             ) : (
               <Login onLogin={handleLogin} />
             )
           } 
         />
         <Route 
+          path="/super-admin" 
+          element={
+            isAuthenticated && userRole === 'super_admin' ? (
+              <SuperAdminDashboard />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          } 
+        />
+        <Route 
           path="/dashboard" 
           element={
-            isAuthenticated ? (
+            isAuthenticated && userRole !== 'super_admin' ? (
               <Dashboard />
             ) : (
               <Navigate to="/" replace />

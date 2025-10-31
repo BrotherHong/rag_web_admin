@@ -6,6 +6,11 @@
   --ncku-red-light: #c72126;
 }
 
+/* 強制顯示滾動條以避免內容偏移 */
+html {
+  overflow-y: scroll;
+}
+
 body {
   background-color: white;
   color: black;

@@ -3,34 +3,45 @@
  * 負責處理系統設定、備份還原相關功能 (僅供 super_admin 使用)
  */
 
-import { mockDatabase } from '../mock/database.js';
-import { delay } from '../utils/helpers.js';
 import { ROLES, checkPermission } from '../utils/permissions.js';
 
 // API Base URL（實際應用中應該從環境變數讀取）
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+
+// 取得授權標頭
+const getAuthHeader = () => ({
+  'Authorization': `Bearer ${localStorage.getItem('token')}`
+});
 
 /**
  * 取得系統設定
  * @returns {Promise} 系統設定
  */
 export const getSettings = async () => {
-  await delay(300);
-  
   try {
-    // const response = await fetch(`${API_BASE_URL}/settings`, {
-    //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    // });
+    const response = await fetch(`${API_BASE_URL}/settings`, {
+      method: 'GET',
+      headers: getAuthHeader()
+    });
     
-    // 從 mockDatabase 讀取設定
-    return {
-      success: true,
-      data: { ...mockDatabase.settings }
-    };
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } else {
+      const error = await response.json();
+      return {
+        success: false,
+        message: error.detail || '獲取系統設定失敗'
+      };
+    }
   } catch (error) {
+    console.error('Get settings error:', error);
     return {
       success: false,
-      message: '獲取系統設定失敗'
+      message: '獲取系統設定失敗，請檢查網路連線'
     };
   }
 };
@@ -41,8 +52,6 @@ export const getSettings = async () => {
  * @returns {Promise} 更新結果
  */
 export const updateSettings = async (settings) => {
-  await delay(500);
-  
   try {
     // 權限檢查：需要 super_admin 權限
     const permission = checkPermission(ROLES.SUPER_ADMIN);
@@ -53,26 +62,33 @@ export const updateSettings = async (settings) => {
       };
     }
     
-    // const response = await fetch(`${API_BASE_URL}/settings`, {
-    //   method: 'PUT',
-    //   headers: {
-    //     'Authorization': `Bearer ${localStorage.getItem('token')}`,
-    //     'Content-Type': 'application/json'
-    //   },
-    //   body: JSON.stringify(settings)
-    // });
+    const response = await fetch(`${API_BASE_URL}/settings`, {
+      method: 'PUT',
+      headers: {
+        ...getAuthHeader(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(settings)
+    });
     
-    // 更新 mockDatabase 中的設定
-    mockDatabase.settings = { ...mockDatabase.settings, ...settings };
-    
-    return {
-      success: true,
-      message: '設定已儲存'
-    };
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        success: true,
+        message: data.message || '設定已儲存'
+      };
+    } else {
+      const error = await response.json();
+      return {
+        success: false,
+        message: error.detail || '儲存設定失敗'
+      };
+    }
   } catch (error) {
+    console.error('Update settings error:', error);
     return {
       success: false,
-      message: '儲存設定失敗'
+      message: '儲存設定失敗，請檢查網路連線'
     };
   }
 };
@@ -82,27 +98,31 @@ export const updateSettings = async (settings) => {
  * @returns {Promise} 備份歷史
  */
 export const getBackupHistory = async () => {
-  await delay(300);
-  
   try {
-    // const response = await fetch(`${API_BASE_URL}/backups/history`, {
-    //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    // });
+    const response = await fetch(`${API_BASE_URL}/backups/history`, {
+      method: 'GET',
+      headers: getAuthHeader()
+    });
     
-    const backupHistory = [
-      { id: 1, date: '2025-10-15 02:00', size: '2.5 GB', status: 'success' },
-      { id: 2, date: '2025-10-08 02:00', size: '2.3 GB', status: 'success' },
-      { id: 3, date: '2025-10-01 02:00', size: '2.1 GB', status: 'success' },
-    ];
-    
-    return {
-      success: true,
-      data: backupHistory
-    };
+    if (response.ok) {
+      const data = await response.json();
+      // 後端返回: { items: [{id, date, size, status}] }
+      return {
+        success: true,
+        data: data.items || []
+      };
+    } else {
+      const error = await response.json();
+      return {
+        success: false,
+        message: error.detail || '獲取備份歷史失敗'
+      };
+    }
   } catch (error) {
+    console.error('Get backup history error:', error);
     return {
       success: false,
-      message: '獲取備份歷史失敗'
+      message: '獲取備份歷史失敗，請檢查網路連線'
     };
   }
 };
@@ -112,22 +132,30 @@ export const getBackupHistory = async () => {
  * @returns {Promise} 備份結果
  */
 export const createBackup = async () => {
-  await delay(2000);
-  
   try {
-    // const response = await fetch(`${API_BASE_URL}/backups/create`, {
-    //   method: 'POST',
-    //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    // });
+    const response = await fetch(`${API_BASE_URL}/backups/create`, {
+      method: 'POST',
+      headers: getAuthHeader()
+    });
     
-    return {
-      success: true,
-      message: '備份建立成功'
-    };
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        success: true,
+        message: data.message || '備份建立成功'
+      };
+    } else {
+      const error = await response.json();
+      return {
+        success: false,
+        message: error.detail || '建立備份失敗'
+      };
+    }
   } catch (error) {
+    console.error('Create backup error:', error);
     return {
       success: false,
-      message: '建立備份失敗'
+      message: '建立備份失敗，請檢查網路連線'
     };
   }
 };
@@ -138,22 +166,30 @@ export const createBackup = async () => {
  * @returns {Promise} 還原結果
  */
 export const restoreBackup = async (backupId) => {
-  await delay(3000);
-  
   try {
-    // const response = await fetch(`${API_BASE_URL}/backups/${backupId}/restore`, {
-    //   method: 'POST',
-    //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    // });
+    const response = await fetch(`${API_BASE_URL}/backups/${backupId}/restore`, {
+      method: 'POST',
+      headers: getAuthHeader()
+    });
     
-    return {
-      success: true,
-      message: '備份還原成功'
-    };
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        success: true,
+        message: data.message || '備份還原成功'
+      };
+    } else {
+      const error = await response.json();
+      return {
+        success: false,
+        message: error.detail || '還原備份失敗'
+      };
+    }
   } catch (error) {
+    console.error('Restore backup error:', error);
     return {
       success: false,
-      message: '還原備份失敗'
+      message: '還原備份失敗，請檢查網路連線'
     };
   }
 };
@@ -163,37 +199,31 @@ export const restoreBackup = async (backupId) => {
  * @returns {Promise} 系統資訊
  */
 export const getSystemInfo = async () => {
-  await delay(400);
-  
   try {
-    // const response = await fetch(`${API_BASE_URL}/system/info`, {
-    //   headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-    // });
+    const response = await fetch(`${API_BASE_URL}/system/info`, {
+      method: 'GET',
+      headers: getAuthHeader()
+    });
     
-    const systemInfo = {
-      version: '1.0.0',
-      uptime: '15 天 8 小時',
-      cpuUsage: 45,
-      memoryUsage: 62,
-      databaseSize: '2.3 GB',
-      cacheSize: '156 MB',
-      apiRequests: 12450,
-      errorRate: 0.5,
-      storage: {
-        used: '45.6 GB',
-        total: '100 GB',
-        percentage: 45.6
-      }
-    };
-    
-    return {
-      success: true,
-      data: systemInfo
-    };
+    if (response.ok) {
+      const data = await response.json();
+      // 後端返回: { version, uptime, cpuUsage, memoryUsage, databaseSize, cacheSize, apiRequests, errorRate, storage }
+      return {
+        success: true,
+        data: data
+      };
+    } else {
+      const error = await response.json();
+      return {
+        success: false,
+        message: error.detail || '獲取系統資訊失敗'
+      };
+    }
   } catch (error) {
+    console.error('Get system info error:', error);
     return {
       success: false,
-      message: '獲取系統資訊失敗'
+      message: '獲取系統資訊失敗，請檢查網路連線'
     };
   }
 };

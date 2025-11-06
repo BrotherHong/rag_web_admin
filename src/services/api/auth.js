@@ -3,11 +3,8 @@
  * 負責處理使用者認證相關功能
  */
 
-import { mockDatabase } from '../mock/database.js';
-import { delay } from '../utils/helpers.js';
-
-// API Base URL（實際應用中應該從環境變數讀取）
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
+// API Base URL（從環境變數讀取）
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 /**
  * 登入 API
@@ -16,47 +13,47 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000
  * @returns {Promise} 登入結果
  */
 export const login = async (username, password) => {
-  await delay(800); // 模擬網路延遲
-  
   try {
-    // 模擬 API 呼叫
-    // const response = await fetch(`${API_BASE_URL}/auth/login`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ username, password })
-    // });
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ username, password })
+    });
     
-    // 模擬後端驗證邏輯
-    const user = mockDatabase.users.find(
-      u => u.username === username && u.password === password
-    );
+    const data = await response.json();
     
-    if (user) {
-      const token = `mock_token_${user.id}_${Date.now()}`;
+    if (response.ok) {
+      // 後端返回格式: { token, user: { id, username, email, name, role, isSuperAdmin, department: {...} } }
       return {
         success: true,
         data: {
           user: {
-            id: user.id,
-            username: user.username,
-            name: user.name,
-            role: user.role,
-            departmentId: user.departmentId  // 加入 departmentId
+            id: data.user.id,
+            username: data.user.username,
+            name: data.user.name || data.user.fullName,
+            email: data.user.email,
+            role: data.user.role,
+            departmentId: data.user.department?.id || null,
+            departmentName: data.user.department?.name || null,
+            isSuperAdmin: data.user.isSuperAdmin || false
           },
-          token: token
+          token: data.token
         },
         message: '登入成功'
       };
     } else {
       return {
         success: false,
-        message: '帳號或密碼錯誤'
+        message: data.detail || data.message || '帳號或密碼錯誤'
       };
     }
   } catch (error) {
+    console.error('Login error:', error);
     return {
       success: false,
-      message: '登入失敗，請稍後再試'
+      message: '登入失敗，請檢查網路連線或稍後再試'
     };
   }
 };
@@ -66,17 +63,34 @@ export const login = async (username, password) => {
  * @returns {Promise} 登出結果
  */
 export const logout = async () => {
-  await delay(300);
-  
   try {
-    // 模擬 API 呼叫
-    // const response = await fetch(`${API_BASE_URL}/auth/logout`, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Authorization': `Bearer ${localStorage.getItem('token')}`
-    //   }
-    // });
+    const token = localStorage.getItem('token');
     
+    const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    // 無論後端回應如何，都清除本地儲存
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    
+    if (response.ok) {
+      return {
+        success: true,
+        message: '登出成功'
+      };
+    } else {
+      // 即使後端失敗，前端也算登出成功
+      return {
+        success: true,
+        message: '登出成功'
+      };
+    }
+  } catch (error) {
+    console.error('Logout error:', error);
     // 清除本地儲存
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -84,11 +98,6 @@ export const logout = async () => {
     return {
       success: true,
       message: '登出成功'
-    };
-  } catch (error) {
-    return {
-      success: false,
-      message: '登出失敗'
     };
   }
 };
@@ -99,21 +108,19 @@ export const logout = async () => {
  * @returns {Promise} 驗證結果
  */
 export const verifyToken = async (token) => {
-  await delay(200);
-  
   try {
-    // 模擬 API 呼叫
-    // const response = await fetch(`${API_BASE_URL}/auth/verify`, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Authorization': `Bearer ${token}`
-    //   }
-    // });
+    const response = await fetch(`${API_BASE_URL}/auth/verify`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
     
-    // 簡單的 token 格式驗證（mock）
-    if (token && token.startsWith('mock_token_')) {
+    if (response.ok) {
+      const data = await response.json();
       return {
         success: true,
+        data: data.user,
         message: 'Token 有效'
       };
     } else {
@@ -123,6 +130,7 @@ export const verifyToken = async (token) => {
       };
     }
   } catch (error) {
+    console.error('Token verification error:', error);
     return {
       success: false,
       message: '驗證失敗'

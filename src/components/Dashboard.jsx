@@ -84,15 +84,16 @@ function Dashboard() {
   
   // 取得處室名稱
   const getDepartmentName = () => {
-    // 如果是系統管理員代理，直接使用 departmentName
-    if (user.isSuperAdminProxy && user.departmentName) {
+    // 登入時後端已返回 departmentName,直接使用即可
+    if (user.departmentName) {
       return user.departmentName;
     }
     
+    // 系統管理員沒有處室
     if (!user.departmentId) return '系統';
-    // 這裡可以從 API 取得處室名稱,為了簡化暫時hardcode
-    const deptNames = { 1: '人事室', 2: '會計室', 3: '總務處' };
-    return deptNames[user.departmentId] || '未知處室';
+    
+    // 如果缺少 departmentName,顯示預設值
+    return '未知處室';
   };
 
   return (

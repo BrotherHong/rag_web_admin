@@ -321,7 +321,7 @@ function SuperAdminDashboard() {
     const superAdminUser = getUserInfo();
     localStorage.setItem('superAdminUser', JSON.stringify(superAdminUser));
     
-    // 建立一個臨時的處事管理員身分
+    // 模擬處室管理員身分（系統管理員代理功能）
     const tempUser = {
       id: dept.id,
       username: `${dept.name}_admin`,

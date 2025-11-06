@@ -146,15 +146,17 @@ function Login({ onLogin }) {
             </button>
           </form>
 
-          {/* 測試帳號提示 */}
-          <div className="mt-6 text-center text-xs text-gray-500 border-t pt-4">
-            <p className="font-semibold mb-2">測試帳號</p>
-            <div className="space-y-1">
-              <p>系統管理員：superadmin / super123</p>
-              <p>人事室管理員：hr_admin / admin123</p>
-              <p>會計室管理員：acc_admin / admin123</p>
+          {/* 測試帳號提示 - 僅開發環境顯示 */}
+          {import.meta.env.DEV && (
+            <div className="mt-6 text-center text-xs text-gray-500 border-t pt-4">
+              <p className="font-semibold mb-2">測試帳號</p>
+              <div className="space-y-1">
+                <p>系統管理員：superadmin / super123</p>
+                <p>人事室管理員：hr_admin / admin123</p>
+                <p>會計室管理員：acc_admin / admin123</p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* 科技感線條裝飾 */}

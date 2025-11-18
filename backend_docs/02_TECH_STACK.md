@@ -12,61 +12,60 @@ Python 3.11+  # 推薦 3.11 或 3.12
 
 ```txt
 # Web 框架
-fastapi==0.115.0
-uvicorn[standard]==0.30.0
-python-multipart==0.0.9
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+python-multipart>=0.0.9
 
 # 資料庫 ORM
-sqlalchemy==2.0.35
-asyncpg==0.29.0              # PostgreSQL 異步驅動
-alembic==1.13.3              # 資料庫遷移
+sqlalchemy>=2.0.35
+asyncpg>=0.29.0              # PostgreSQL 異步驅動
+alembic>=1.13.0              # 資料庫遷移
 
 # 快取與佇列
-redis==5.0.8
-celery==5.4.0
-flower==2.0.1                # Celery 監控
+redis>=5.0.0
+celery>=5.4.0
+flower>=2.0.0                # Celery 監控
 
 # 認證與安全
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-python-multipart==0.0.9
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
 
 # 資料驗證
-pydantic==2.9.0
-pydantic-settings==2.5.2
-email-validator==2.2.0
+pydantic>=2.9.0
+pydantic-settings>=2.5.0
+email-validator>=2.2.0
 
 # 檔案處理
-python-magic==0.4.27
-pypdf2==3.0.1
-python-docx==1.1.2
-pillow==10.4.0
+python-magic>=0.4.27
+pypdf2>=3.0.0
+python-docx>=1.1.0
+pillow>=10.4.0
 
 # 向量與 RAG
-qdrant-client==1.11.3
-langchain==0.3.0
-langchain-openai==0.2.0
-openai==1.51.0
-tiktoken==0.7.0
+qdrant-client>=1.11.0
+langchain>=0.3.0
+langchain-openai>=0.2.0
+openai>=1.51.0
+tiktoken>=0.7.0
 
 # 物件儲存
-minio==7.2.8
+minio>=7.2.0
 
 # 工具
-python-dotenv==1.0.1
-httpx==0.27.2
-aiofiles==24.1.0
+python-dotenv>=1.0.0
+httpx>=0.27.0
+aiofiles>=24.1.0
 
 # 監控與日誌
-prometheus-client==0.21.0
-python-json-logger==2.0.7
+prometheus-client>=0.21.0
+python-json-logger>=2.0.0
 
 # 開發工具
-pytest==8.3.3
-pytest-asyncio==0.24.0
-black==24.8.0
-flake8==7.1.1
-mypy==1.11.2
+pytest>=8.3.0
+pytest-asyncio>=0.24.0
+black>=24.8.0
+flake8>=7.1.0
+mypy>=1.11.0
 ```
 
 ---

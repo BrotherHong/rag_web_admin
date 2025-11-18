@@ -21,7 +21,8 @@ rag_web_backend/
 │   │   │   ├── upload.py       # 批次上傳路由
 │   │   │   ├── users.py        # 使用者管理路由
 │   │   │   ├── departments.py # 處室管理路由
-│   │   │   └── settings.py    # 系統設定路由
+│   │   │   ├── settings.py    # 系統設定路由
+│   │   │   └── statistics.py  # 統計資料路由
 │   │   └── deps.py             # API 層級依賴
 │   │
 │   ├── models/                 # SQLAlchemy 模型
@@ -43,6 +44,7 @@ rag_web_backend/
 │   │   ├── activity.py         # 活動 Schema
 │   │   ├── auth.py             # 認證 Schema
 │   │   ├── upload.py           # 上傳 Schema
+│   │   ├── statistics.py       # 統計資料 Schema
 │   │   └── common.py           # 共用 Schema (分頁、回應)
 │   │
 │   ├── services/               # 業務邏輯層
@@ -129,14 +131,14 @@ rag_web_backend/
 ```python
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1 import auth, files, categories, activities, upload, users, departments, settings
-from app.core.config import settings
+from app.api.v1 import auth, files, categories, activities, upload, users, departments, settings, statistics
+from app.core.config import settings as app_settings
 from app.core.middleware import LoggingMiddleware, RateLimitMiddleware
 from app.core.exceptions import setup_exception_handlers
 
 # 建立 FastAPI 應用程式
 app = FastAPI(
-    title=settings.APP_NAME,
+    title=app_settings.APP_NAME,
     version="1.0.0",
     description="RAG 知識庫管理系統後端 API",
     docs_url="/api/docs",
@@ -146,7 +148,7 @@ app = FastAPI(
 # CORS 設定
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=app_settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -168,6 +170,7 @@ app.include_router(upload.router, prefix="/api/upload", tags=["批次上傳"])
 app.include_router(users.router, prefix="/api/users", tags=["使用者管理"])
 app.include_router(departments.router, prefix="/api/departments", tags=["處室管理"])
 app.include_router(settings.router, prefix="/api/settings", tags=["系統設定"])
+app.include_router(statistics.router, prefix="/api/statistics", tags=["統計資料"])
 
 @app.get("/")
 async def root():

@@ -73,7 +73,7 @@ function App() {
           element={
             isAuthenticated ? (
               // 根據使用者角色導向不同的管理頁面
-              userRole === 'super_admin' ? (
+              userRole === 'SUPER_ADMIN' ? (
                 <Navigate to="/super-admin" replace />
               ) : (
                 <Navigate to="/dashboard" replace />
@@ -86,7 +86,7 @@ function App() {
         <Route 
           path="/super-admin" 
           element={
-            isAuthenticated && userRole === 'super_admin' ? (
+            isAuthenticated && userRole === 'SUPER_ADMIN' ? (
               <SuperAdminDashboard />
             ) : (
               <Navigate to="/" replace />
@@ -96,7 +96,7 @@ function App() {
         <Route 
           path="/dashboard" 
           element={
-            isAuthenticated && userRole !== 'super_admin' ? (
+            isAuthenticated && userRole !== 'SUPER_ADMIN' ? (
               <Dashboard />
             ) : (
               <Navigate to="/" replace />

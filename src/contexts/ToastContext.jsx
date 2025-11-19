@@ -48,7 +48,18 @@ export const ToastProvider = ({ children }) => {
 export const useToast = () => {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error('useToast must be used within ToastProvider');
+    // 如果在開發環境，拋出錯誤
+    if (import.meta.env.DEV) {
+      throw new Error('useToast must be used within ToastProvider');
+    }
+    // 在生產環境，返回一個 no-op 對象以避免崩潰
+    console.error('useToast must be used within ToastProvider');
+    return {
+      success: () => {},
+      error: () => {},
+      warning: () => {},
+      info: () => {},
+    };
   }
   return context;
 };

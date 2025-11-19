@@ -19,6 +19,7 @@ import DepartmentManagement from './superadmin/DepartmentManagement';
 import UserManagement from './superadmin/UserManagement';
 import SystemSettings from './superadmin/SystemSettings';
 import ActivityLog from './superadmin/ActivityLog';
+import { getActivityConfig } from '../utils/activityConfig';
 
 function SuperAdminDashboard() {
   const navigate = useNavigate();
@@ -54,28 +55,28 @@ function SuperAdminDashboard() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    color: 'blue'
+    color: '#3B82F6' // 預設藍色
   });
 
   // 可用的顏色選項
   const colorOptions = [
-    { value: 'red', label: '紅色', class: 'bg-red-500' },
-    { value: 'blue', label: '藍色', class: 'bg-blue-500' },
-    { value: 'green', label: '綠色', class: 'bg-green-500' },
-    { value: 'yellow', label: '黃色', class: 'bg-yellow-500' },
-    { value: 'purple', label: '紫色', class: 'bg-purple-500' },
-    { value: 'pink', label: '粉色', class: 'bg-pink-500' },
-    { value: 'indigo', label: '靛藍', class: 'bg-indigo-500' },
-    { value: 'orange', label: '橙色', class: 'bg-orange-500' },
+    { value: '#EF4444', label: '紅色' },
+    { value: '#3B82F6', label: '藍色' },
+    { value: '#10B981', label: '綠色' },
+    { value: '#F59E0B', label: '黃色' },
+    { value: '#8B5CF6', label: '紫色' },
+    { value: '#EC4899', label: '粉色' },
+    { value: '#6366F1', label: '靛藍' },
+    { value: '#F97316', label: '橙色' },
   ];
 
   // 獲取使用者資訊
   const getUserInfo = () => {
     try {
       const userStr = localStorage.getItem('user');
-      return userStr ? JSON.parse(userStr) : { name: '系統管理員', username: 'SuperAdmin', role: 'super_admin' };
+      return userStr ? JSON.parse(userStr) : { name: '系統管理員', username: 'SuperAdmin', role: 'SUPER_ADMIN' };
     } catch {
-      return { name: '系統管理員', username: 'SuperAdmin', role: 'super_admin' };
+      return { name: '系統管理員', username: 'SuperAdmin', role: 'SUPER_ADMIN' };
     }
   };
 
@@ -215,7 +216,7 @@ function SuperAdminDashboard() {
   
   // 取消變更
   const handleCancelSettings = () => {
-    setTempSettings(systemSettings);
+    setTempSettings({ ...systemSettings }); // 使用深拷貝
     setHasUnsavedChanges(false);
   };
 
@@ -318,18 +319,34 @@ function SuperAdminDashboard() {
   // 進入處事管理頁面
   const enterDepartmentDashboard = (dept) => {
     // 暫存系統管理員的資訊
-    const superAdminUser = getUserInfo();
-    localStorage.setItem('superAdminUser', JSON.stringify(superAdminUser));
+    const currentUser = getUserInfo();
     
-    // 模擬處室管理員身分（系統管理員代理功能）
+    // 檢查是否已經有保存的 superAdminUser (防止重複進入代理模式)
+    const existingSuperAdminUser = localStorage.getItem('superAdminUser');
+    
+    if (!existingSuperAdminUser) {
+      // 首次進入代理模式,保存當前的系統管理員資訊
+      // 確保存儲的是純 super_admin 身分（清除可能存在的任何處室相關屬性）
+      const superAdminUser = {
+        id: currentUser.id,
+        name: currentUser.name,
+        username: currentUser.username,
+        role: 'SUPER_ADMIN'
+        // 明確不包含 departmentId 和 departmentName
+      };
+      localStorage.setItem('superAdminUser', JSON.stringify(superAdminUser));
+    }
+    
+    // 模擬處室管理員身分（保留原始 user id，token 不變）
     const tempUser = {
-      id: dept.id,
-      username: `${dept.name}_admin`,
+      id: currentUser.id, // 保留原始 user id
+      username: currentUser.username,
       name: `${dept.name} 管理員 (系統管理員代理)`,
-      role: 'admin',
+      role: 'ADMIN',
       departmentId: dept.id,
       departmentName: dept.name,
-      isSuperAdminProxy: true // 標記為系統管理員代理
+      isSuperAdminProxy: true, // 標記為系統管理員代理
+      _originalRole: 'SUPER_ADMIN' // 保存原始角色
     };
     
     localStorage.setItem('user', JSON.stringify(tempUser));
@@ -364,24 +381,8 @@ function SuperAdminDashboard() {
     setFormData({
       name: '',
       description: '',
-      color: 'blue'
+      color: '#3B82F6' // 預設藍色
     });
-  };
-  
-  // 根據顏色名稱返回對應的 class
-  const getColorClass = (color) => {
-    const colorMap = {
-      red: 'bg-red-500',
-      blue: 'bg-blue-500',
-      green: 'bg-green-500',
-      yellow: 'bg-yellow-500',
-      purple: 'bg-purple-500',
-      pink: 'bg-pink-500',
-      indigo: 'bg-indigo-500',
-      orange: 'bg-orange-500',
-      gray: 'bg-gray-500',
-    };
-    return colorMap[color] || 'bg-gray-500';
   };
 
   return (
@@ -613,7 +614,7 @@ function SuperAdminDashboard() {
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <div className={`w-8 h-8 rounded-full ${color.class} mb-1`}></div>
+                      <div className="w-8 h-8 rounded-full mb-1" style={{ backgroundColor: color.value }}></div>
                       <span className="text-xs text-gray-600">{color.label}</span>
                     </button>
                   ))}
@@ -686,7 +687,7 @@ function SuperAdminDashboard() {
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <div className={`w-8 h-8 rounded-full ${color.class} mb-1`}></div>
+                      <div className="w-8 h-8 rounded-full mb-1" style={{ backgroundColor: color.value }}></div>
                       <span className="text-xs text-gray-600">{color.label}</span>
                     </button>
                   ))}
@@ -803,80 +804,54 @@ function SuperAdminDashboard() {
                 {statsData.recentActivities.length > 0 ? (
                   <div className="space-y-2">
                     {statsData.recentActivities.map((activity, index) => {
-                      // 根據活動類型決定顯示內容和樣式
-                      const getActivityConfig = (type) => {
-                        switch(type) {
-                          case 'upload':
-                            return {
-                              bgColor: 'bg-green-100',
-                              iconColor: 'text-green-600',
-                              icon: (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                              ),
-                              label: '上傳檔案',
-                              name: activity.fileName
-                            };
-                          case 'delete':
-                            return {
-                              bgColor: 'bg-red-100',
-                              iconColor: 'text-red-600',
-                              icon: (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              ),
-                              label: '刪除檔案',
-                              name: activity.fileName
-                            };
-                          case 'category_add':
-                            return {
-                              bgColor: 'bg-blue-100',
-                              iconColor: 'text-blue-600',
-                              icon: (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                                      d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                              ),
-                              label: '新增分類',
-                              name: activity.categoryName
-                            };
-                          case 'category_delete':
-                            return {
-                              bgColor: 'bg-orange-100',
-                              iconColor: 'text-orange-600',
-                              icon: (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                                      d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                              ),
-                              label: '刪除分類',
-                              name: activity.categoryName
-                            };
-                          default:
-                            return {
-                              bgColor: 'bg-gray-100',
-                              iconColor: 'text-gray-600',
-                              icon: (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              ),
-                              label: '其他操作',
-                              name: activity.fileName || activity.categoryName || '未知'
-                            };
+                      const config = getActivityConfig(activity.type?.toLowerCase() || activity.type);
+                      const extractTarget = (description) => {
+                        const colonIndex = description?.indexOf(':');
+                        if (colonIndex > -1) {
+                          return description.substring(colonIndex + 1).trim();
                         }
+                        return description || '系統操作';
                       };
-
-                      const config = getActivityConfig(activity.type);
 
                       return (
                         <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${config.bgColor}`}>
-                            <svg className={`w-4 h-4 ${config.iconColor}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              {config.icon}
+                          <div 
+                            className="w-8 h-8 rounded-full flex items-center justify-center"
+                            style={{ backgroundColor: config.bgColor }}
+                          >
+                            <svg 
+                              className="w-4 h-4" 
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                              style={{ color: config.iconColor }}
+                            >
+                              <path 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                strokeWidth={2} 
+                                d={config.icon}
+                              />
                             </svg>
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">
-                              {config.label} - {config.name}
+                            <p className="text-sm font-semibold text-gray-900 mb-0.5">
+                              {config.label}
                             </p>
-                            <p className="text-xs text-gray-500">{activity.user}</p>
+                            <p className="text-sm text-gray-700 mb-1">
+                              {extractTarget(activity.description)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              <span className="inline-flex items-center">
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                {activity.user}
+                              </span>
+                              <span className="mx-2">•</span>
+                              <span>{new Date(activity.createdAt).toLocaleString('zh-TW')}</span>
+                            </p>
                           </div>
                         </div>
                       );

@@ -4,8 +4,8 @@
 
 // 權限級別定義
 export const ROLES = {
-  SUPER_ADMIN: 'super_admin',  // 系統管理員：可以管理所有處室
-  ADMIN: 'admin'               // 處室管理員：可以管理自己處室的所有內容
+  SUPER_ADMIN: 'SUPER_ADMIN',  // 系統管理員：可以管理所有處室
+  ADMIN: 'ADMIN'               // 處室管理員：可以管理自己處室的所有內容
 };
 
 // 權限檢查工具函數
@@ -19,10 +19,10 @@ export const checkPermission = (requiredRole) => {
     const user = JSON.parse(userStr);
     const userRole = user.role;
     
-    // 權限層級：super_admin > admin
+    // 權限層級：SUPER_ADMIN > ADMIN
     const roleHierarchy = {
-      super_admin: 2,
-      admin: 1
+      SUPER_ADMIN: 2,
+      ADMIN: 1
     };
     
     const userLevel = roleHierarchy[userRole] || 0;

@@ -8,10 +8,23 @@ import { ROLES, checkPermission } from '../utils/permissions.js';
 // API Base URL（實際應用中應該從環境變數讀取）
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
-// 取得授權標頭
-const getAuthHeader = () => ({
-  'Authorization': `Bearer ${localStorage.getItem('token')}`
-});
+// 取得授權標頭（加上代理支援）
+const getAuthHeader = () => {
+  const headers = {
+    'Authorization': `Bearer ${localStorage.getItem('token')}`
+  };
+  
+  // 如果是代理模式，添加 X-Proxy-Department-Id header
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    const user = JSON.parse(userStr);
+    if (user.isSuperAdminProxy && user.departmentId) {
+      headers['X-Proxy-Department-Id'] = user.departmentId.toString();
+    }
+  }
+  
+  return headers;
+};
 
 /**
  * 取得系統統計資料
@@ -61,10 +74,24 @@ export const getRecentActivities = async (limit = 10) => {
     
     if (response.ok) {
       const data = await response.json();
-      // 後端返回: { items: [{id, type, fileName, user, timestamp, ...}] }
+      // 後端返回: { items: [{id, activity_type, description, username, file_name, created_at, department_id, department_name, ...}] }
+      // 映射為前端期待的格式
+      const mappedActivities = (data.items || []).map(activity => ({
+        id: activity.id,
+        type: activity.activity_type,
+        description: activity.description,
+        fileName: activity.file_name,
+        user: activity.username || activity.user_full_name,
+        timestamp: activity.created_at,
+        userName: activity.user_full_name,
+        departmentId: activity.department_id,
+        departmentName: activity.department_name,
+        categoryName: null  // 如果需要可以從 description 解析
+      }));
+      
       return {
         success: true,
-        data: data.items || []
+        data: mappedActivities
       };
     } else {
       const error = await response.json();
@@ -112,9 +139,23 @@ export const getAllActivities = async (departmentId = null, limit = 50) => {
     if (response.ok) {
       const data = await response.json();
       // 後端返回: { items: [...], total }
+      // 映射為前端期待的格式
+      const mappedActivities = (data.items || []).map(activity => ({
+        id: activity.id,
+        type: activity.activity_type.toLowerCase(), // 轉為小寫
+        description: activity.description,
+        fileName: activity.file_name,
+        user: activity.username || activity.user_full_name,
+        timestamp: activity.created_at,
+        userName: activity.user_full_name,
+        departmentId: activity.department_id,
+        departmentName: activity.department_name,
+        categoryName: null
+      }));
+      
       return {
         success: true,
-        data: data.items || []
+        data: mappedActivities
       };
     } else {
       const error = await response.json();

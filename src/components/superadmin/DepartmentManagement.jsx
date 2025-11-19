@@ -37,25 +37,20 @@ function DepartmentManagement({ departments, onRefresh, isLoading }) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    color: 'blue'
+    color: '#3B82F6' // 預設藍色
   });
 
   // 可用的顏色選項
   const colorOptions = [
-    { value: 'red', label: '紅色', class: 'bg-red-500' },
-    { value: 'blue', label: '藍色', class: 'bg-blue-500' },
-    { value: 'green', label: '綠色', class: 'bg-green-500' },
-    { value: 'yellow', label: '黃色', class: 'bg-yellow-500' },
-    { value: 'purple', label: '紫色', class: 'bg-purple-500' },
-    { value: 'pink', label: '粉色', class: 'bg-pink-500' },
-    { value: 'indigo', label: '靛藍', class: 'bg-indigo-500' },
-    { value: 'orange', label: '橙色', class: 'bg-orange-500' },
+    { value: '#EF4444', label: '紅色' },
+    { value: '#3B82F6', label: '藍色' },
+    { value: '#10B981', label: '綠色' },
+    { value: '#F59E0B', label: '黃色' },
+    { value: '#8B5CF6', label: '紫色' },
+    { value: '#EC4899', label: '粉色' },
+    { value: '#6366F1', label: '靛藍' },
+    { value: '#F97316', label: '橙色' },
   ];
-
-  // 取得顏色 class
-  const getColorClass = (color) => {
-    return `bg-${color}-500`;
-  };
 
   // 打開編輯 Modal
   const openEditModal = (dept) => {
@@ -73,7 +68,7 @@ function DepartmentManagement({ departments, onRefresh, isLoading }) {
     setFormData({
       name: '',
       description: '',
-      color: 'blue'
+      color: '#3B82F6' // 預設藍色
     });
   };
 
@@ -144,18 +139,34 @@ function DepartmentManagement({ departments, onRefresh, isLoading }) {
   // 進入處室管理後台
   const enterDepartmentDashboard = (dept) => {
     // 暫存系統管理員的資訊
-    const superAdminUser = JSON.parse(localStorage.getItem('user') || '{}');
-    localStorage.setItem('superAdminUser', JSON.stringify(superAdminUser));
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
     
-    // 建立一個臨時的處室管理員身分
+    // 檢查是否已經有保存的 superAdminUser (防止重複進入代理模式)
+    const existingSuperAdminUser = localStorage.getItem('superAdminUser');
+    
+    if (!existingSuperAdminUser) {
+      // 首次進入代理模式,保存當前的系統管理員資訊
+      // 確保存儲的是純 super_admin 身分（清除可能存在的任何處室相關屬性）
+      const superAdminUser = {
+        id: currentUser.id,
+        name: currentUser.name,
+        username: currentUser.username,
+        role: 'SUPER_ADMIN'
+        // 明確不包含 departmentId 和 departmentName
+      };
+      localStorage.setItem('superAdminUser', JSON.stringify(superAdminUser));
+    }
+    
+    // 建立一個臨時的處室管理員身分（保留原始 id, token 不變）
     const tempUser = {
-      id: dept.id,
-      username: `${dept.name}_admin`,
+      id: currentUser.id, // 保留原始 user id
+      username: currentUser.username,
       name: `${dept.name} 管理員 (系統管理員代理)`,
-      role: 'admin',
+      role: 'ADMIN',
       departmentId: dept.id,
       departmentName: dept.name,
-      isSuperAdminProxy: true // 標記為系統管理員代理
+      isSuperAdminProxy: true, // 標記為系統管理員代理
+      _originalRole: 'SUPER_ADMIN' // 保存原始角色
     };
     
     localStorage.setItem('user', JSON.stringify(tempUser));
@@ -220,13 +231,21 @@ function DepartmentManagement({ departments, onRefresh, isLoading }) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {departments.map(dept => (
-            <div key={dept.id} className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all overflow-hidden border-t-4"
-                 style={{ borderColor: `var(--${dept.color}-500)` }}>
+            <div 
+              key={dept.id} 
+              className={`bg-white rounded-xl shadow-md hover:shadow-xl transition-all overflow-hidden border-t-4 ${
+                dept.color && dept.color.startsWith('#') ? '' : `border-${dept.color}-500`
+              }`}
+              style={dept.color && dept.color.startsWith('#') ? { borderTopColor: dept.color } : {}}
+            >
               {/* 卡片頭部 */}
               <div className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    <div className={`w-12 h-12 rounded-lg ${getColorClass(dept.color)} flex items-center justify-center text-white text-xl font-bold`}>
+                    <div 
+                      className="w-12 h-12 rounded-lg flex items-center justify-center text-white text-xl font-bold"
+                      style={{ backgroundColor: dept.color }}
+                    >
                       {dept.name.charAt(0)}
                     </div>
                     <div>
@@ -344,7 +363,8 @@ function DepartmentManagement({ departments, onRefresh, isLoading }) {
                     <button
                       key={option.value}
                       onClick={() => setFormData({...formData, color: option.value})}
-                      className={`${option.class} h-10 rounded-lg hover:opacity-80 transition-opacity cursor-pointer ${
+                      style={{ backgroundColor: option.value }}
+                      className={`h-10 rounded-lg hover:opacity-80 transition-opacity cursor-pointer ${
                         formData.color === option.value ? 'ring-4 ring-offset-2 ring-gray-400' : ''
                       }`}
                       title={option.label}
@@ -414,7 +434,8 @@ function DepartmentManagement({ departments, onRefresh, isLoading }) {
                     <button
                       key={option.value}
                       onClick={() => setFormData({...formData, color: option.value})}
-                      className={`${option.class} h-10 rounded-lg hover:opacity-80 transition-opacity cursor-pointer ${
+                      style={{ backgroundColor: option.value }}
+                      className={`h-10 rounded-lg hover:opacity-80 transition-opacity cursor-pointer ${
                         formData.color === option.value ? 'ring-4 ring-offset-2 ring-gray-400' : ''
                       }`}
                       title={option.label}

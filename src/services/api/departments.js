@@ -9,9 +9,22 @@ import { ROLES, checkPermission } from '../utils/permissions.js';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 // 取得授權標頭
-const getAuthHeader = () => ({
-  'Authorization': `Bearer ${localStorage.getItem('token')}`
-});
+const getAuthHeader = () => {
+  const headers = {
+    'Authorization': `Bearer ${localStorage.getItem('token')}`
+  };
+  
+  // 如果是代理模式，添加 X-Proxy-Department-Id header
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    const user = JSON.parse(userStr);
+    if (user.isSuperAdminProxy && user.departmentId) {
+      headers['X-Proxy-Department-Id'] = user.departmentId.toString();
+    }
+  }
+  
+  return headers;
+};
 
 /**
  * 取得所有處室
@@ -26,10 +39,17 @@ export const getDepartments = async () => {
     
     if (response.ok) {
       const data = await response.json();
-      // 後端返回: { items: [{id, name, description, color, userCount, fileCount, createdAt, settings}] }
+      // 後端返回: { items: [{id, name, description, color, user_count, file_count, created_at}] }
+      // 轉換 snake_case 為 camelCase
+      const items = (data.items || []).map(dept => ({
+        ...dept,
+        userCount: dept.user_count || 0,
+        fileCount: dept.file_count || 0,
+        createdAt: dept.created_at
+      }));
       return {
         success: true,
-        data: data.items || []
+        data: items
       };
     } else {
       const error = await response.json();
@@ -242,10 +262,23 @@ export const getDepartmentStats = async (departmentId) => {
     
     if (response.ok) {
       const data = await response.json();
-      // 後端返回: { departmentName, totalFiles, totalUsers, filesByCategory, recentActivities }
+      // 後端返回: { department_name, user_count, file_count, activity_count, recent_activities }
+      // 轉換為前端期望的格式
       return {
         success: true,
-        data: data
+        data: {
+          departmentName: data.department_name,
+          totalUsers: data.user_count || 0,
+          totalFiles: data.file_count || 0,
+          activityCount: data.activity_count || 0,
+          filesByCategory: {}, // TODO: 後端需要添加此欄位
+          recentActivities: (data.recent_activities || []).map(act => ({
+            type: act.activity_type,
+            description: act.description,
+            user: act.username,
+            createdAt: act.created_at
+          }))
+        }
       };
     } else {
       const error = await response.json();

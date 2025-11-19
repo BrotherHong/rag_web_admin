@@ -13,6 +13,7 @@ import { useToast } from '../contexts/ToastContext';
 import ConfirmDialog from './common/ConfirmDialog';
 import KnowledgeBase from './KnowledgeBase';
 import UploadFiles from './UploadFiles';
+import { getActivityConfig } from '../utils/activityConfig';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -66,6 +67,9 @@ function Dashboard() {
       const superAdminUserStr = localStorage.getItem('superAdminUser');
       if (superAdminUserStr) {
         const superAdminUser = JSON.parse(superAdminUserStr);
+        
+        // 直接使用保存的 superAdminUser,不再進行任何修改
+        // 因為保存時已經確保是純 super_admin 身分
         localStorage.setItem('user', JSON.stringify(superAdminUser));
         localStorage.removeItem('superAdminUser');
         
@@ -378,71 +382,98 @@ function DashboardHome() {
   };
 
   const getActivityIcon = (type) => {
-    if (type === 'upload') {
+    if (type === 'UPLOAD') {
       return (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
         </svg>
       );
-    } else if (type === 'delete') {
+    } else if (type === 'DOWNLOAD') {
+      return (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+        </svg>
+      );
+    } else if (type === 'DELETE') {
       return (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
         </svg>
       );
-    } else if (type === 'category_add') {
+    } else if (type === 'CREATE_CATEGORY' || type === 'UPDATE_CATEGORY') {
       return (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                 d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
         </svg>
       );
-    } else if (type === 'category_delete') {
+    } else if (type === 'DELETE_CATEGORY') {
       return (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                 d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
       );
-    } else if (type === 'user_add' || type === 'user_update' || type === 'user_delete') {
+    } else if (type === 'CREATE_USER' || type === 'UPDATE_USER' || type === 'DELETE_USER') {
       return (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
         </svg>
       );
-    } else if (type === 'settings_update') {
+    } else if (type === 'UPDATE_FILE') {
       return (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      );
+    } else if (type === 'LOGIN' || type === 'LOGOUT') {
+      return (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+        </svg>
+      );
+    } else if (type === 'QUERY' || type === 'SEARCH') {
+      return (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
       );
     }
-    return null;
+    return (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    );
   };
 
   const getActivityText = (activity) => {
-    if (activity.type === 'upload') {
-      return '新增檔案';
-    } else if (activity.type === 'delete') {
-      return '刪除檔案';
-    } else if (activity.type === 'category_add') {
-      return '新增分類';
-    } else if (activity.type === 'category_delete') {
-      return '刪除分類';
-    } else if (activity.type === 'user_add') {
-      return '新增使用者';
-    } else if (activity.type === 'user_update') {
-      return '更新使用者';
-    } else if (activity.type === 'user_delete') {
-      return '刪除使用者';
-    } else if (activity.type === 'settings_update') {
-      return '更新系統設定';
-    }
-    return '未知操作';
+    const typeMap = {
+      'LOGIN': '登入系統',
+      'LOGOUT': '登出系統',
+      'UPLOAD': '上傳檔案',
+      'DOWNLOAD': '下載檔案',
+      'DELETE': '刪除檔案',
+      'SEARCH': '搜尋檔案',
+      'QUERY': 'RAG 查詢',
+      'UPDATE_PROFILE': '更新個人資料',
+      'UPDATE_FILE': '更新檔案資訊',
+      'CREATE_USER': '建立使用者',
+      'UPDATE_USER': '更新使用者',
+      'DELETE_USER': '刪除使用者',
+      'CREATE_CATEGORY': '建立分類',
+      'UPDATE_CATEGORY': '更新分類',
+      'DELETE_CATEGORY': '刪除分類'
+    };
+    return typeMap[activity.type] || '未知操作';
   };
 
   if (isLoading) {
@@ -540,60 +571,69 @@ function DashboardHome() {
         <h3 className="text-lg font-bold mb-4">最近活動</h3>
         <div className="space-y-4">
           {activities.length > 0 ? (
-            activities.map((activity) => (
-              <div key={activity.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                {/* 操作類型圖示 */}
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center"
-                       style={{ 
-                         backgroundColor: 
-                           activity.type === 'upload' ? '#dcfce7' : 
-                           activity.type === 'category_add' || activity.type === 'user_add' ? '#dbeafe' :
-                           activity.type === 'user_update' ? '#fef3c7' :
-                           '#fee2e2'
-                       }}>
-                    <div style={{ 
-                      color: 
-                        activity.type === 'upload' ? '#16a34a' : 
-                        activity.type === 'category_add' || activity.type === 'user_add' ? '#2563eb' :
-                        activity.type === 'user_update' ? '#f59e0b' :
-                        '#dc2626'
-                    }}>
-                      {getActivityIcon(activity.type)}
+            activities.map((activity) => {
+              const config = getActivityConfig(activity.type?.toLowerCase());
+              const extractTarget = (description) => {
+                const colonIndex = description?.indexOf(':');
+                if (colonIndex > -1) {
+                  return description.substring(colonIndex + 1).trim();
+                }
+                return description || '系統操作';
+              };
+              
+              return (
+                <div key={activity.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                  {/* 操作類型圖示 */}
+                  <div className="flex-shrink-0">
+                    <div 
+                      className="w-10 h-10 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: config.bgColor }}
+                    >
+                      <svg 
+                        className="w-5 h-5" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                        style={{ color: config.iconColor }}
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d={config.icon}
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                  
+                  {/* 活動詳情 */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 text-base mb-1">
+                      {config.label}
+                    </p>
+                    <p className="text-sm text-gray-700 mb-1 font-medium">
+                      {extractTarget(activity.description)}
+                    </p>
+                    <div className="flex items-center gap-3 text-xs text-gray-600">
+                      <span className="flex items-center">
+                        <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        {activity.user || '系統'}
+                      </span>
+                      <span className="flex items-center text-gray-500">
+                        <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {formatTimeAgo(activity.timestamp)}
+                      </span>
                     </div>
                   </div>
                 </div>
-                {/* 檔案類型圖示或分類圖示或使用者圖示 */}
-                {activity.fileName && (
-                  <div className="flex-shrink-0">
-                    {getFileIcon(activity.fileName)}
-                  </div>
-                )}
-                {activity.categoryName && (
-                  <div className="flex-shrink-0">
-                    <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                    </svg>
-                  </div>
-                )}
-                {activity.userName && (
-                  <div className="flex-shrink-0">
-                    <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900">{getActivityText(activity)}</p>
-                  <p className="text-sm text-gray-600 truncate">
-                    {activity.fileName || activity.categoryName || activity.userName}
-                  </p>
-                </div>
-                <p className="text-sm text-gray-500 whitespace-nowrap">{formatTimeAgo(activity.timestamp)}</p>
-              </div>
-            ))
+              );
+            })
           ) : (
             <p className="text-gray-500 text-center py-4">暫無活動記錄</p>
           )}
@@ -605,11 +645,12 @@ function DashboardHome() {
 
 // 分類管理頁面組件
 function CategoryManagement() {
+  const toast = useToast();  // 添加 toast hook
   const [categories, setCategories] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryColor, setNewCategoryColor] = useState('blue');
+  const [newCategoryColor, setNewCategoryColor] = useState('#3B82F6');  // 預設藍色
   const [isLoading, setIsLoading] = useState(true);
 
   // 對話框動畫
@@ -618,31 +659,15 @@ function CategoryManagement() {
 
   // 可用的顏色選項
   const colorOptions = [
-    { value: 'blue', label: '藍色', class: 'bg-blue-500' },
-    { value: 'green', label: '綠色', class: 'bg-green-500' },
-    { value: 'yellow', label: '黃色', class: 'bg-yellow-500' },
-    { value: 'red', label: '紅色', class: 'bg-red-500' },
-    { value: 'purple', label: '紫色', class: 'bg-purple-500' },
-    { value: 'pink', label: '粉色', class: 'bg-pink-500' },
-    { value: 'indigo', label: '靛藍', class: 'bg-indigo-500' },
-    { value: 'orange', label: '橙色', class: 'bg-orange-500' },
+    { value: '#3B82F6', label: '藍色' },
+    { value: '#10B981', label: '綠色' },
+    { value: '#F59E0B', label: '黃色' },
+    { value: '#EF4444', label: '紅色' },
+    { value: '#8B5CF6', label: '紫色' },
+    { value: '#EC4899', label: '粉色' },
+    { value: '#6366F1', label: '靛藍' },
+    { value: '#F97316', label: '橙色' },
   ];
-
-  // 根據顏色名稱返回對應的 class
-  const getColorClass = (color) => {
-    const colorMap = {
-      blue: 'bg-blue-500',
-      green: 'bg-green-500',
-      yellow: 'bg-yellow-500',
-      red: 'bg-red-500',
-      purple: 'bg-purple-500',
-      pink: 'bg-pink-500',
-      indigo: 'bg-indigo-500',
-      orange: 'bg-orange-500',
-      gray: 'bg-gray-500',
-    };
-    return colorMap[color] || 'bg-gray-500';
-  };
 
   // 載入分類列表
   useEffect(() => {
@@ -673,7 +698,7 @@ function CategoryManagement() {
           // 重新載入分類列表
           await loadCategories();
           setNewCategoryName('');
-          setNewCategoryColor('blue');
+          setNewCategoryColor('#3B82F6');
           addModal.handleClose();
           toast.success('分類新增成功');
         } else {
@@ -691,6 +716,8 @@ function CategoryManagement() {
   };
 
   const confirmDeleteCategory = async () => {
+    if (!showDeleteConfirm) return;
+    
     try {
       const response = await deleteCategory(showDeleteConfirm.id);
       if (response.success) {
@@ -703,6 +730,8 @@ function CategoryManagement() {
     } catch (error) {
       console.error('刪除分類錯誤:', error);
       toast.error('刪除分類失敗');
+    } finally {
+      setShowDeleteConfirm(null);
     }
   };
 
@@ -740,7 +769,10 @@ function CategoryManagement() {
           <div key={category.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className={`w-4 h-4 rounded-full ${getColorClass(category.color)}`}></div>
+                <div 
+                  className="w-4 h-4 rounded-full"
+                  style={{ backgroundColor: category.color }}
+                ></div>
                 <div>
                   <h4 className="font-medium text-gray-900">
                     {category.name}
@@ -803,7 +835,7 @@ function CategoryManagement() {
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <div className={`w-8 h-8 rounded-full ${color.class} mb-1`}></div>
+                    <div className="w-8 h-8 rounded-full mb-1" style={{ backgroundColor: color.value }}></div>
                     <span className="text-xs text-gray-600">{color.label}</span>
                   </button>
                 ))}
@@ -816,7 +848,7 @@ function CategoryManagement() {
                 onClick={() => {
                   addModal.handleClose();
                   setNewCategoryName('');
-                  setNewCategoryColor('blue');
+                  setNewCategoryColor('#3B82F6');
                 }}
                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer"
               >

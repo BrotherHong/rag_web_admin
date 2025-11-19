@@ -22,8 +22,10 @@ function SystemSettings({
 
   // 初始化暫存設定
   useEffect(() => {
-    if (systemSettings && !tempSettings) {
+    if (systemSettings) {
+      // 每次 systemSettings 變更時都更新 tempSettings
       setTempSettings(systemSettings);
+      setHasUnsavedChanges(false);
     }
   }, [systemSettings]);
 
@@ -52,7 +54,8 @@ function SystemSettings({
 
   // 取消變更
   const handleCancel = () => {
-    setTempSettings(systemSettings);
+    // 重置為原始的 systemSettings
+    setTempSettings({ ...systemSettings });
     setHasUnsavedChanges(false);
     if (onSettingsCancel) {
       onSettingsCancel();
@@ -183,29 +186,36 @@ function SystemSettings({
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">AI 模型</label>
-                <select
-                  value={tempSettings.aiModel}
-                  onChange={(e) => handleChange('aiModel', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
-                >
-                  <option value="gpt-4">GPT-4</option>
-                  <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                  <option value="claude-3">Claude 3</option>
-                  <option value="llama-2">Llama 2</option>
-                </select>
+                {systemSettings?.rag?.available_models?.length > 0 ? (
+                  <select
+                    value={tempSettings.rag?.model_name}
+                    onChange={(e) => handleChange('rag', { ...tempSettings.rag, model_name: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
+                  >
+                    {systemSettings.rag.available_models.map((model) => (
+                      <option key={model.value} value={model.value}>
+                        {model.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="w-full px-4 py-2 border border-red-300 rounded-lg bg-red-50 text-red-600">
+                    ⚠️ 無法載入 AI 模型選項，請檢查後端設定
+                  </div>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Temperature: {tempSettings.temperature}
+                  Temperature: {tempSettings.rag?.temperature}
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="1"
                   step="0.1"
-                  value={tempSettings.temperature}
-                  onChange={(e) => handleChange('temperature', parseFloat(e.target.value))}
+                  value={tempSettings.rag?.temperature || 0.7}
+                  onChange={(e) => handleChange('rag', { ...tempSettings.rag, temperature: parseFloat(e.target.value) })}
                   className="w-full"
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
@@ -216,15 +226,15 @@ function SystemSettings({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Max Tokens: {tempSettings.maxTokens}
+                  Max Tokens: {tempSettings.rag?.max_tokens}
                 </label>
                 <input
                   type="range"
                   min="100"
                   max="4000"
                   step="100"
-                  value={tempSettings.maxTokens}
-                  onChange={(e) => handleChange('maxTokens', parseInt(e.target.value))}
+                  value={tempSettings.rag?.max_tokens || 2000}
+                  onChange={(e) => handleChange('rag', { ...tempSettings.rag, max_tokens: parseInt(e.target.value) })}
                   className="w-full"
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
@@ -235,31 +245,38 @@ function SystemSettings({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Top P: {tempSettings.topP}
+                  Top P: {tempSettings.rag?.top_p}
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="1"
                   step="0.1"
-                  value={tempSettings.topP}
-                  onChange={(e) => handleChange('topP', parseFloat(e.target.value))}
+                  value={tempSettings.rag?.top_p || 1.0}
+                  onChange={(e) => handleChange('rag', { ...tempSettings.rag, top_p: parseFloat(e.target.value) })}
                   className="w-full"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">回應風格</label>
-                <select
-                  value={tempSettings.tone}
-                  onChange={(e) => handleChange('tone', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
-                >
-                  <option value="professional">專業 (Professional)</option>
-                  <option value="friendly">友善 (Friendly)</option>
-                  <option value="casual">隨意 (Casual)</option>
-                  <option value="formal">正式 (Formal)</option>
-                </select>
+                {systemSettings?.rag?.available_tones?.length > 0 ? (
+                  <select
+                    value={tempSettings.rag?.tone}
+                    onChange={(e) => handleChange('rag', { ...tempSettings.rag, tone: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
+                  >
+                    {systemSettings.rag.available_tones.map((tone) => (
+                      <option key={tone.value} value={tone.value}>
+                        {tone.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="w-full px-4 py-2 border border-red-300 rounded-lg bg-red-50 text-red-600">
+                    ⚠️ 無法載入回應風格選項，請檢查後端設定
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -269,15 +286,15 @@ function SystemSettings({
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  相似度閾值: {tempSettings.similarityThreshold}
+                  相似度閾值: {tempSettings.rag?.similarity_threshold}
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="1"
                   step="0.05"
-                  value={tempSettings.similarityThreshold}
-                  onChange={(e) => handleChange('similarityThreshold', parseFloat(e.target.value))}
+                  value={tempSettings.rag?.similarity_threshold || 0.7}
+                  onChange={(e) => handleChange('rag', { ...tempSettings.rag, similarity_threshold: parseFloat(e.target.value) })}
                   className="w-full"
                 />
                 <p className="text-xs text-gray-500 mt-1">設定文檔檢索的最低相似度要求</p>
@@ -285,15 +302,15 @@ function SystemSettings({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  最大檢索文檔數: {tempSettings.maxRetrievalDocs}
+                  最大檢索文檔數: {tempSettings.rag?.top_k}
                 </label>
                 <input
                   type="range"
                   min="1"
                   max="20"
                   step="1"
-                  value={tempSettings.maxRetrievalDocs}
-                  onChange={(e) => handleChange('maxRetrievalDocs', parseInt(e.target.value))}
+                  value={tempSettings.rag?.top_k || 5}
+                  onChange={(e) => handleChange('rag', { ...tempSettings.rag, top_k: parseInt(e.target.value) })}
                   className="w-full"
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
@@ -304,15 +321,15 @@ function SystemSettings({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  自動清理天數: {tempSettings.autoCleanupDays} 天
+                  自動清理天數: {tempSettings.rag?.auto_cleanup_days || 90} 天
                 </label>
                 <input
                   type="range"
                   min="30"
                   max="365"
                   step="30"
-                  value={tempSettings.autoCleanupDays}
-                  onChange={(e) => handleChange('autoCleanupDays', parseInt(e.target.value))}
+                  value={tempSettings.rag?.auto_cleanup_days || 90}
+                  onChange={(e) => handleChange('rag', { ...tempSettings.rag, auto_cleanup_days: parseInt(e.target.value) })}
                   className="w-full"
                 />
                 <p className="text-xs text-gray-500 mt-1">自動清理超過指定天數未使用的文檔</p>
@@ -320,16 +337,23 @@ function SystemSettings({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">索引更新頻率</label>
-                <select
-                  value={tempSettings.indexUpdateFrequency}
-                  onChange={(e) => handleChange('indexUpdateFrequency', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
-                >
-                  <option value="realtime">即時更新</option>
-                  <option value="hourly">每小時</option>
-                  <option value="daily">每日</option>
-                  <option value="weekly">每週</option>
-                </select>
+                {systemSettings?.rag?.available_index_frequencies?.length > 0 ? (
+                  <select
+                    value={tempSettings.rag?.index_update_frequency}
+                    onChange={(e) => handleChange('rag', { ...tempSettings.rag, index_update_frequency: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
+                  >
+                    {systemSettings.rag.available_index_frequencies.map((freq) => (
+                      <option key={freq.value} value={freq.value}>
+                        {freq.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="w-full px-4 py-2 border border-red-300 rounded-lg bg-red-50 text-red-600">
+                    ⚠️ 無法載入索引更新頻率選項，請檢查後端設定
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -345,26 +369,34 @@ function SystemSettings({
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={tempSettings.autoBackup}
-                    onChange={(e) => handleChange('autoBackup', e.target.checked)}
+                    checked={tempSettings.backup?.auto_backup || false}
+                    onChange={(e) => handleChange('backup', { ...tempSettings.backup, auto_backup: e.target.checked })}
                     className="sr-only peer"
                   />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
                 </label>
               </div>
 
-              {tempSettings.autoBackup && (
+              {tempSettings.backup?.auto_backup && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">備份頻率</label>
-                  <select
-                    value={tempSettings.backupFrequency}
-                    onChange={(e) => handleChange('backupFrequency', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
-                  >
-                    <option value="daily">每日</option>
-                    <option value="weekly">每週</option>
-                    <option value="monthly">每月</option>
-                  </select>
+                  {systemSettings?.backup?.available_backup_frequencies?.length > 0 ? (
+                    <select
+                      value={tempSettings.backup?.backup_frequency}
+                      onChange={(e) => handleChange('backup', { ...tempSettings.backup, backup_frequency: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
+                    >
+                      {systemSettings.backup.available_backup_frequencies.map((freq) => (
+                        <option key={freq.value} value={freq.value}>
+                          {freq.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="w-full px-4 py-2 border border-red-300 rounded-lg bg-red-50 text-red-600">
+                      ⚠️ 無法載入備份頻率選項，請檢查後端設定
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -417,34 +449,30 @@ function SystemSettings({
                   <p className="text-xl font-bold text-gray-900">{systemInfo.version}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">上線時間</p>
-                  <p className="text-xl font-bold text-gray-900">{systemInfo.uptime}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">CPU 使用率</p>
-                  <p className="text-xl font-bold text-gray-900">{systemInfo.cpuUsage}%</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">記憶體使用率</p>
-                  <p className="text-xl font-bold text-gray-900">{systemInfo.memoryUsage}%</p>
+                  <p className="text-sm text-gray-600 mb-1">平台資訊</p>
+                  <p className="text-lg font-bold text-gray-900">{systemInfo.platform}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-sm text-gray-600 mb-1">資料庫大小</p>
                   <p className="text-xl font-bold text-gray-900">{systemInfo.databaseSize}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">快取大小</p>
-                  <p className="text-xl font-bold text-gray-900">{systemInfo.cacheSize}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">API 請求數</p>
+                  <p className="text-sm text-gray-600 mb-1">檔案總數</p>
                   <p className="text-xl font-bold text-gray-900">
-                    {systemInfo.apiRequests ? systemInfo.apiRequests.toLocaleString() : '0'}
+                    {systemInfo.totalFiles?.toLocaleString() || '0'}
                   </p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 mb-1">錯誤率</p>
-                  <p className="text-xl font-bold text-gray-900">{systemInfo.errorRate}%</p>
+                  <p className="text-sm text-gray-600 mb-1">使用者總數</p>
+                  <p className="text-xl font-bold text-gray-900">
+                    {systemInfo.totalUsers?.toLocaleString() || '0'}
+                  </p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-600 mb-1">活動記錄數</p>
+                  <p className="text-xl font-bold text-gray-900">
+                    {systemInfo.totalActivities?.toLocaleString() || '0'}
+                  </p>
                 </div>
               </div>
 
@@ -453,7 +481,7 @@ function SystemSettings({
                 <div className="space-y-3">
                   <div>
                     <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-600">已使用空間</span>
+                      <span className="text-gray-600">磁碟空間</span>
                       <span className="font-medium text-gray-900">
                         {systemInfo.storage?.used || '0 GB'} / {systemInfo.storage?.total || '100 GB'}
                       </span>
@@ -462,12 +490,14 @@ function SystemSettings({
                       <div
                         className="h-2 rounded-full transition-all"
                         style={{
-                          width: `${systemInfo.storage?.percentage || 0}%`,
+                          width: `${Math.min(systemInfo.storage?.percentage || 0, 100)}%`,
                           backgroundColor: (systemInfo.storage?.percentage || 0) > 80 ? '#ef4444' : 'var(--ncku-red)'
                         }}
                       ></div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">{systemInfo.storage?.percentage || 0}% 使用中</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {(systemInfo.storage?.percentage || 0).toFixed(1)}% 使用中
+                    </p>
                   </div>
                 </div>
               </div>

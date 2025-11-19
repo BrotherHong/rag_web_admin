@@ -9,9 +9,22 @@ import { ROLES, checkPermission } from '../utils/permissions.js';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 // 取得授權標頭
-const getAuthHeader = () => ({
-  'Authorization': `Bearer ${localStorage.getItem('token')}`
-});
+const getAuthHeader = () => {
+  const headers = {
+    'Authorization': `Bearer ${localStorage.getItem('token')}`
+  };
+  
+  // 如果是代理模式，添加 X-Proxy-Department-Id header
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    const user = JSON.parse(userStr);
+    if (user.isSuperAdminProxy && user.departmentId) {
+      headers['X-Proxy-Department-Id'] = user.departmentId.toString();
+    }
+  }
+  
+  return headers;
+};
 
 /**
  * 取得系統設定
@@ -19,16 +32,25 @@ const getAuthHeader = () => ({
  */
 export const getSettings = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/settings`, {
+    const response = await fetch(`${API_BASE_URL}/settings/`, {
       method: 'GET',
       headers: getAuthHeader()
     });
     
     if (response.ok) {
       const data = await response.json();
+      // 後端返回: { items: [{key, value, ...}], total, page, pages }
+      // 將設定項目轉換為物件，key 作為屬性名
+      const settings = {};
+      if (data.items) {
+        data.items.forEach(item => {
+          settings[item.key] = item.value;
+        });
+      }
+      
       return {
         success: true,
-        data: data
+        data: settings
       };
     } else {
       const error = await response.json();
@@ -62,13 +84,22 @@ export const updateSettings = async (settings) => {
       };
     }
     
-    const response = await fetch(`${API_BASE_URL}/settings`, {
-      method: 'PUT',
+    // 將設定物件轉換回後端期待的格式
+    const backendSettings = {
+      rag: settings.rag || {},
+      app: settings.app || {},
+      feature: settings.feature || {},
+      backup: settings.backup || {},
+      security: settings.security || {}
+    };
+    
+    const response = await fetch(`${API_BASE_URL}/settings/batch`, {
+      method: 'POST',
       headers: {
         ...getAuthHeader(),
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(settings)
+      body: JSON.stringify({ settings: backendSettings })
     });
     
     if (response.ok) {

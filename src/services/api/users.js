@@ -9,9 +9,22 @@ import { ROLES, checkPermission } from '../utils/permissions.js';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 // 取得授權標頭
-const getAuthHeader = () => ({
-  'Authorization': `Bearer ${localStorage.getItem('token')}`
-});
+const getAuthHeader = () => {
+  const headers = {
+    'Authorization': `Bearer ${localStorage.getItem('token')}`
+  };
+  
+  // 如果是代理模式，添加 X-Proxy-Department-Id header
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    const user = JSON.parse(userStr);
+    if (user.isSuperAdminProxy && user.departmentId) {
+      headers['X-Proxy-Department-Id'] = user.departmentId.toString();
+    }
+  }
+  
+  return headers;
+};
 
 /**
  * 取得所有使用者
@@ -19,17 +32,28 @@ const getAuthHeader = () => ({
  */
 export const getUsers = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/users`, {
+    const response = await fetch(`${API_BASE_URL}/users/`, {
       method: 'GET',
       headers: getAuthHeader()
     });
     
     if (response.ok) {
       const data = await response.json();
-      // 後端返回: { items: [{id, name, username, email, role, departmentId, status}] }
+      // 後端返回: { items: [{id, full_name, username, email, role, department_id, is_active}] }
+      // 映射為前端期待的格式
+      const mappedUsers = (data.items || []).map(user => ({
+        id: user.id,
+        name: user.full_name,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        departmentId: user.department_id,
+        status: user.is_active ? 'active' : 'inactive'
+      }));
+      
       return {
         success: true,
-        data: data.items || []
+        data: mappedUsers
       };
     } else {
       const error = await response.json();
@@ -63,13 +87,22 @@ export const addUser = async (userData) => {
       };
     }
     
-    const response = await fetch(`${API_BASE_URL}/users`, {
+    // 映射為後端期待的格式
+    const requestData = {
+      username: userData.username,
+      email: userData.email,
+      full_name: userData.name,
+      password: userData.password,
+      department_id: parseInt(userData.departmentId)
+    };
+    
+    const response = await fetch(`${API_BASE_URL}/users/`, {
       method: 'POST',
       headers: {
         ...getAuthHeader(),
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(userData)
+      body: JSON.stringify(requestData)
     });
     
     if (response.ok) {
@@ -78,12 +111,12 @@ export const addUser = async (userData) => {
         success: true,
         data: {
           id: data.id,
-          name: data.name,
+          name: data.full_name,
           username: data.username,
           email: data.email,
           role: data.role,
-          departmentId: data.departmentId,
-          status: data.status
+          departmentId: data.department_id,
+          status: data.is_active ? 'active' : 'inactive'
         },
         message: '使用者新增成功'
       };
@@ -120,13 +153,25 @@ export const updateUser = async (userId, userData) => {
       };
     }
     
-    const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+    // 映射為後端期待的格式
+    const requestData = {
+      email: userData.email,
+      full_name: userData.name,
+      department_id: parseInt(userData.departmentId)
+    };
+    
+    // 只有填寫密碼時才更新密碼
+    if (userData.password && userData.password.trim()) {
+      requestData.password = userData.password;
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/users/${userId}/`, {
       method: 'PUT',
       headers: {
         ...getAuthHeader(),
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(userData)
+      body: JSON.stringify(requestData)
     });
     
     if (response.ok) {
@@ -167,7 +212,7 @@ export const deleteUser = async (userId) => {
       };
     }
     
-    const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+    const response = await fetch(`${API_BASE_URL}/users/${userId}/`, {
       method: 'DELETE',
       headers: getAuthHeader()
     });

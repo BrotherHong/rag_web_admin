@@ -1,16 +1,350 @@
-# React + Vite
+# RAG Knowledge Base - Admin Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> 🎯 **RAG 知識庫系統 - 管理後台前端**  
+> 基於 React + Vite 的現代化後台管理系統，提供完整的權限管理、文件管理、系統設定等功能。
 
-Currently, two official plugins are available:
+[![React](https://img.shields.io/badge/React-19.1-61DAFB?logo=react)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-7.1-646CFF?logo=vite)](https://vitejs.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.1-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## 📚 目錄
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- [專案簡介](#專案簡介)
+- [核心特色](#核心特色)
+- [技術棧](#技術棧)
+- [快速開始](#快速開始)
+- [專案結構](#專案結構)
+- [功能模組](#功能模組)
+- [部署](#部署)
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 📖 專案簡介
+
+RAG Knowledge Base Admin Frontend 是一個現代化的後台管理系統，用於管理 RAG 知識庫系統的所有功能。系統採用 React 19 + Vite 7 構建，提供快速的開發體驗和優秀的用戶體驗。
+
+### 適用場景
+
+- 🏢 企業內部知識庫管理
+- 📚 文檔管理系統
+- 👥 多部門協作平台
+- 🔍 智能問答系統管理
+
+---
+
+## ✨ 核心特色
+
+### 🎨 用戶體驗
+- ⚡ **極速體驗**: Vite 驅動的快速開發和構建
+- 🎯 **直觀界面**: 基於 Tailwind CSS 4 的現代化 UI
+- 📱 **響應式設計**: 完美支援各種螢幕尺寸
+- 🌈 **流暢動畫**: 優雅的頁面轉場和交互反饋
+
+### 🔐 權限管理
+- 👑 **多角色支援**: 系統管理員、部門管理員、一般使用者
+- 🔒 **細粒度控制**: 基於角色的功能權限管理
+- 🏢 **部門隔離**: 資料按部門分級存取
+
+### 📁 文件管理
+- 📤 **批次上傳**: 支援拖拽和多檔案上傳
+- 🔍 **智能搜尋**: 即時搜尋和篩選
+- 📊 **分類管理**: 靈活的檔案分類體系
+
+### ⚙️ 系統設定
+- 🎛️ **集中管理**: 統一的系統設定中心
+- 🔧 **動態配置**: 後端驅動的下拉選項
+- 📈 **實時更新**: 設定變更即時生效
+
+---
+
+## 🏗️ 技術棧
+
+| 技術 | 版本 | 用途 |
+|------|------|------|
+| **React** | 19.1 | 核心 UI 框架 |
+| **Vite** | 7.1 | 建構工具與開發伺服器 |
+| **React Router** | 7.9 | 路由管理 |
+| **Tailwind CSS** | 4.1 | CSS 框架 |
+| **Lucide React** | 0.548 | 圖標庫 |
+| **ESLint** | 9.36 | 代碼檢查 |
+
+---
+
+## 🚀 快速開始
+
+### 前置需求
+
+- **Node.js**: >= 18.0.0
+- **npm**: >= 9.0.0
+- **後端 API**: 確保後端服務已啟動
+
+### 安裝步驟
+
+#### 1. 克隆專案
+
+```bash
+git clone <repository-url>
+cd rag_web_admin
+```
+
+#### 2. 安裝依賴
+
+```bash
+npm install
+```
+
+#### 3. 環境配置
+
+```bash
+# 複製環境變數範本
+cp .env.example .env
+```
+
+編輯 `.env` 文件：
+
+```env
+# API 基礎 URL
+VITE_API_BASE_URL=http://localhost:8000/api
+```
+
+#### 4. 啟動開發伺服器
+
+```bash
+npm run dev
+```
+
+訪問 http://localhost:5173
+
+#### 5. 登入系統
+
+使用預設管理員帳號：
+- **帳號**: admin
+- **密碼**: admin123
+
+⚠️ **首次登入後請立即修改密碼！**
+
+---
+
+## 📂 專案結構
+
+```
+rag_web_admin/
+│
+├── public/                       # 靜態資源
+│   └── images/                  # 圖片資源
+│
+├── src/                          # 源代碼目錄
+│   ├── components/              # React 組件
+│   │   ├── common/              # 通用組件
+│   │   │   ├── ConfirmDialog.jsx    # 確認對話框
+│   │   │   └── Toast.jsx            # 提示訊息
+│   │   │
+│   │   ├── superadmin/          # 超級管理員組件
+│   │   │   ├── UserManagement.jsx      # 使用者管理
+│   │   │   ├── DepartmentManagement.jsx # 部門管理
+│   │   │   ├── SystemSettings.jsx      # 系統設定
+│   │   │   └── ActivityLog.jsx         # 活動日誌
+│   │   │
+│   │   ├── Dashboard.jsx        # 儀表板
+│   │   ├── Login.jsx            # 登入頁面
+│   │   ├── KnowledgeBase.jsx    # 知識庫管理
+│   │   └── UploadFiles.jsx      # 檔案上傳
+│   │
+│   ├── contexts/                # React Context
+│   │   └── ToastContext.jsx    # Toast 通知
+│   │
+│   ├── services/                # API 服務層
+│   │   ├── api.js              # API 統一導出
+│   │   └── api/                # API 模組
+│   │       ├── auth.js         # 認證
+│   │       ├── users.js        # 使用者管理
+│   │       ├── departments.js  # 部門管理
+│   │       ├── files.js        # 檔案管理
+│   │       ├── categories.js   # 分類管理
+│   │       ├── upload.js       # 批次上傳
+│   │       ├── settings.js     # 系統設定
+│   │       └── activities.js   # 活動記錄
+│   │
+│   ├── utils/                   # 工具函數
+│   ├── App.jsx                  # 主應用
+│   └── main.jsx                 # 入口文件
+│
+├── .env.example                  # 環境變數範本
+├── package.json                  # 專案依賴
+├── vite.config.js                # Vite 配置
+└── README.md                     # 專案說明
+```
+
+---
+
+## 🎯 功能模組
+
+### 1. 認證與授權
+- ✅ JWT Token 認證
+- ✅ 自動 Token 刷新
+- ✅ 角色權限驗證
+
+### 2. 使用者管理 (系統管理員)
+- ✅ 使用者 CRUD 操作
+- ✅ 角色與權限分配
+- ✅ 部門歸屬管理
+
+### 3. 部門管理 (系統管理員)
+- ✅ 部門 CRUD 操作
+- ✅ 部門統計資訊
+
+### 4. 文件管理
+- ✅ 檔案上傳與下載
+- ✅ 批次上傳處理
+- ✅ 檔案搜尋與篩選
+- ✅ 分類管理
+
+### 5. 系統設定 (系統管理員)
+- ✅ 應用程式設定
+- ✅ RAG 參數設定
+- ✅ 安全性設定
+- ✅ 備份與還原
+
+**重要**: 所有下拉選項(AI 模型、回應風格等)由後端動態提供，前端無硬編碼選項。
+
+### 6. 活動日誌 (系統管理員)
+- ✅ 完整操作記錄
+- ✅ 多維度篩選
+
+### 7. 統計儀表板
+- ✅ 即時數據統計
+- ✅ 使用者活動分析
+
+---
+
+## 🛠️ 開發指南
+
+### 開發模式
+
+```bash
+# 啟動開發伺服器 (支援熱重載)
+npm run dev
+```
+
+### 代碼檢查
+
+```bash
+# 執行 ESLint
+npm run lint
+```
+
+### 建構生產版本
+
+```bash
+# 建構優化後的生產版本
+npm run build
+```
+
+### 本地預覽
+
+```bash
+# 預覽建構後的版本
+npm run preview
+```
+
+---
+
+## 🚢 部署
+
+### 建構生產版本
+
+```bash
+npm run build
+```
+
+建構產物位於 `dist/` 目錄。
+
+### Nginx 配置範例
+
+```nginx
+server {
+    listen 80;
+    server_name admin.your-domain.com;
+
+    root /var/www/rag_admin/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # API 代理 (可選)
+    location /api/ {
+        proxy_pass http://backend:8000/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+### Docker 部署
+
+```dockerfile
+FROM node:18-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+---
+
+## 🔐 安全性建議
+
+1. **環境變數保護**
+   - ❌ 切勿將 `.env` 提交到 Git
+   - ✅ 使用 `.env.example` 作為範本
+
+2. **Token 管理**
+   - ✅ Token 儲存在 localStorage
+   - ✅ 自動過期處理
+   - ✅ 登出時清除本地資料
+
+3. **API 安全**
+   - ✅ 所有請求攜帶 Bearer Token
+   - ✅ HTTPS 連線 (生產環境)
+
+---
+
+## 📝 更新日誌
+
+### Version 1.0.0 (2025-01-19)
+
+#### 新功能
+- ✅ 完整的後台管理系統
+- ✅ 多角色權限管理
+- ✅ 檔案批次上傳
+- ✅ 系統設定管理 (動態下拉選項)
+- ✅ 活動日誌追蹤
+
+#### 技術優化
+- ✅ React 19 升級
+- ✅ Vite 7 升級
+- ✅ Tailwind CSS 4 升級
+- ✅ API 模組化重構
+- ✅ 前後端資料結構統一 (巢狀格式)
+
+---
+
+## 🔗 相關連結
+
+- **後端專案**: [rag_web_backend](../rag_web_backend)
+- **使用者前端**: [rag_web](../rag_web)
+- **API 文檔**: http://localhost:8000/docs
+
+---
+
+**Made with ❤️ by RAG Knowledge Base Team**

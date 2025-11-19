@@ -31,9 +31,9 @@ const UploadFiles = ({ onNavigateToKnowledgeBase }) => {
   const getUserInfo = () => {
     try {
       const userStr = localStorage.getItem('user');
-      return userStr ? JSON.parse(userStr) : { name: '管理員', username: 'Admin', role: 'admin' };
+      return userStr ? JSON.parse(userStr) : { name: '管理員', username: 'Admin', role: 'ADMIN' };
     } catch {
-      return { name: '管理員', username: 'Admin', role: 'admin' };
+      return { name: '管理員', username: 'Admin', role: 'ADMIN' };
     }
   };
   

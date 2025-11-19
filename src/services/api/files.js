@@ -11,9 +11,22 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 /**
  * 獲取 Authorization Header
  */
-const getAuthHeader = () => ({
-  'Authorization': `Bearer ${localStorage.getItem('token')}`
-});
+const getAuthHeader = () => {
+  const headers = {
+    'Authorization': `Bearer ${localStorage.getItem('token')}`
+  };
+  
+  // 如果是代理模式，添加 X-Proxy-Department-Id header
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    const user = JSON.parse(userStr);
+    if (user.isSuperAdminProxy && user.departmentId) {
+      headers['X-Proxy-Department-Id'] = user.departmentId.toString();
+    }
+  }
+  
+  return headers;
+};
 
 /**
  * 取得所有檔案
@@ -39,10 +52,24 @@ export const getFiles = async (params = {}) => {
     if (response.ok) {
       const data = await response.json();
       // 後端返回: { items: [...], total, page, pages }
+      // 將後端欄位映射到前端期待的格式
+      const mappedFiles = data.items.map(file => ({
+        id: file.id,
+        name: file.original_filename,
+        category: file.category?.name || '未分類',
+        size: `${(file.file_size / (1024 * 1024)).toFixed(2)} MB`,
+        uploadDate: new Date(file.created_at).toLocaleDateString('zh-TW'),
+        status: file.status,
+        uploader: file.uploader?.full_name || file.uploader?.username || '未知',
+        isVectorized: file.is_vectorized,
+        vectorCount: file.vector_count || 0,
+        downloadCount: file.download_count || 0
+      }));
+      
       return {
         success: true,
         data: {
-          files: data.items,
+          files: mappedFiles,
           total: data.total,
           page: data.page,
           pages: data.pages
@@ -132,7 +159,7 @@ export const deleteFile = async (fileId) => {
     if (response.ok) {
       const data = await response.json();
       return {
-        success: true,
+        success: data.success !== undefined ? data.success : true,
         message: data.message || '檔案刪除成功'
       };
     } else {

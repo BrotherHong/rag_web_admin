@@ -79,8 +79,7 @@ function UserManagement({ users, departments, onRefresh, isLoading }) {
 
   // 處理編輯使用者
   const handleEditUser = async () => {
-    if (!userFormData.name.trim() || !userFormData.username.trim() || 
-        !userFormData.email.trim() || !userFormData.departmentId) {
+    if (!userFormData.name.trim() || !userFormData.email.trim() || !userFormData.departmentId) {
       toast.warning('請填寫所有必填欄位');
       return;
     }
@@ -88,7 +87,6 @@ function UserManagement({ users, departments, onRefresh, isLoading }) {
     try {
       const updateData = {
         name: userFormData.name,
-        username: userFormData.username,
         email: userFormData.email,
         departmentId: userFormData.departmentId
       };
@@ -191,7 +189,7 @@ function UserManagement({ users, departments, onRefresh, isLoading }) {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {users.filter(u => u.role === 'admin').map(user => (
+                {users.filter(u => u.role === 'ADMIN').map(user => (
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">{user.name}</td>
                     <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{user.username}</td>
@@ -340,14 +338,16 @@ function UserManagement({ users, departments, onRefresh, isLoading }) {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">帳號 *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">帳號</label>
                 <input
                   type="text"
                   value={userFormData.username}
-                  onChange={(e) => setUserFormData({ ...userFormData, username: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:outline-none"
+                  readOnly
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
                   placeholder="請輸入帳號"
                 />
+                <p className="text-xs text-gray-500 mt-1">帳號無法修改</p>
               </div>
 
               <div>
@@ -401,8 +401,7 @@ function UserManagement({ users, departments, onRefresh, isLoading }) {
               </button>
               <button
                 onClick={handleEditUser}
-                disabled={!userFormData.name.trim() || !userFormData.username.trim() || 
-                          !userFormData.email.trim() || !userFormData.departmentId}
+                disabled={!userFormData.name.trim() || !userFormData.email.trim() || !userFormData.departmentId}
                 className="px-4 py-2 text-white rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: 'var(--ncku-red)' }}
               >

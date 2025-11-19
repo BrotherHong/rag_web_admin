@@ -12,17 +12,20 @@ function KnowledgeBase() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [showFileDetail, setShowFileDetail] = useState(false);
 
   // 對話框動畫
   const deleteModal = useModalAnimation(showDeleteConfirm !== null, () => setShowDeleteConfirm(null));
+  const detailModal = useModalAnimation(showFileDetail, () => setShowFileDetail(false));
   
   // 獲取當前使用者權限
   const getUserInfo = () => {
     try {
       const userStr = localStorage.getItem('user');
-      return userStr ? JSON.parse(userStr) : { name: '管理員', username: 'Admin', role: 'admin' };
+      return userStr ? JSON.parse(userStr) : { name: '管理員', username: 'Admin', role: 'ADMIN' };
     } catch {
-      return { name: '管理員', username: 'Admin', role: 'admin' };
+      return { name: '管理員', username: 'Admin', role: 'ADMIN' };
     }
   };
   
@@ -74,6 +77,12 @@ function KnowledgeBase() {
     }
   };
 
+  // 處理檢視檔案詳情
+  const handleViewDetail = (file) => {
+    setSelectedFile(file);
+    setShowFileDetail(true);
+  };
+
   // 處理檔案刪除
   const handleDelete = async (id) => {
     try {
@@ -100,11 +109,10 @@ function KnowledgeBase() {
       const response = await downloadFile(id);
       
       if (response.success) {
-        // 實際應用中會開啟下載連結
-        toast.info(`準備下載：${response.data.fileName}`);
+        toast.success('檔案下載成功');
       } else {
         console.error('下載失敗:', response.message);
-        toast.error(response.message);
+        toast.error(response.message || '下載檔案失敗');
       }
     } catch (error) {
       console.error('下載錯誤:', error);
@@ -114,7 +122,13 @@ function KnowledgeBase() {
 
   // 根據顏色返回對應的 Tailwind 類別（標籤背景）
   const getCategoryColorClasses = (categoryName) => {
-    const color = categoryMap[categoryName] || 'gray';
+    const color = categoryMap[categoryName] || '#6B7280';
+    
+    // 如果是 hex 顏色碼，返回空字串（將使用 inline style）
+    if (color && color.startsWith('#')) {
+      return '';
+    }
+    
     const colorClassMap = {
       blue: 'bg-blue-100 text-blue-800',
       green: 'bg-green-100 text-green-800',
@@ -129,25 +143,28 @@ function KnowledgeBase() {
     return colorClassMap[color] || 'bg-gray-100 text-gray-800';
   };
 
-  // 根據顏色返回對應的邊框顏色類別（卡片邊框）
-  const getCategoryBorderClass = (categoryName) => {
-    const color = categoryMap[categoryName] || 'gray';
-    const borderClassMap = {
-      blue: 'border-blue-500',
-      green: 'border-green-500',
-      yellow: 'border-yellow-500',
-      red: 'border-red-500',
-      purple: 'border-purple-500',
-      pink: 'border-pink-500',
-      indigo: 'border-indigo-500',
-      orange: 'border-orange-500',
-      gray: 'border-gray-500',
-    };
-    return borderClassMap[color] || 'border-gray-500';
+  // 將 hex 顏色轉換為 rgba（帶透明度）
+  const hexToRgba = (hex, alpha = 0.2) => {
+    if (!hex || !hex.startsWith('#')) return null;
+    
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
 
   // 根據檔案類型返回圖示
   const getFileIcon = (fileName) => {
+    // 防止 fileName 為 undefined 或 null
+    if (!fileName || typeof fileName !== 'string') {
+      return (
+        <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+        </svg>
+      );
+    }
+    
     const ext = fileName.split('.').pop().toLowerCase();
     
     if (ext === 'pdf') {
@@ -217,7 +234,8 @@ function KnowledgeBase() {
         {categories.map(category => (
           <div 
             key={category.id} 
-            className={`bg-white rounded-lg shadow-md p-4 border-l-4 ${getCategoryBorderClass(category.name)}`}
+            className="bg-white rounded-lg shadow-md p-4 border-l-4"
+            style={{ borderColor: category.color || '#6B7280' }}
           >
             <p className="text-gray-600 text-sm">{category.name}</p>
             <p className="text-2xl font-bold mt-1">
@@ -271,7 +289,11 @@ function KnowledgeBase() {
                     ? 'text-white shadow-md'
                     : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
                 }`}
-                style={selectedCategory === category.name ? { backgroundColor: 'var(--ncku-red)' } : {}}
+                style={
+                  selectedCategory === category.name
+                    ? { backgroundColor: category.color || 'var(--ncku-red)' }
+                    : {}
+                }
               >
                 {category.name}
               </button>
@@ -328,7 +350,18 @@ function KnowledgeBase() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getCategoryColorClasses(file.category)}`}>
+                    <span 
+                      className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getCategoryColorClasses(file.category)}`}
+                      style={
+                        categoryMap[file.category] && categoryMap[file.category].startsWith('#')
+                          ? {
+                              backgroundColor: hexToRgba(categoryMap[file.category], 0.15),
+                              color: categoryMap[file.category],
+                              border: `2px solid ${categoryMap[file.category]}`
+                            }
+                          : {}
+                      }
+                    >
                       {file.category}
                     </span>
                   </td>
@@ -340,7 +373,11 @@ function KnowledgeBase() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      <button className="text-blue-600 hover:text-blue-900 transition-colors cursor-pointer" title="查看詳情">
+                      <button 
+                        className="text-blue-600 hover:text-blue-900 transition-colors cursor-pointer" 
+                        onClick={() => handleViewDetail(file)}
+                        title="查看詳情"
+                      >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                                 d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -388,6 +425,112 @@ function KnowledgeBase() {
           </table>
         )}
       </div>
+
+      {/* 檔案詳情模態框 */}
+      {detailModal.shouldRender && selectedFile && (
+        <div className={`fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 ${detailModal.animationClass}`}>
+          <div className={`bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto ${detailModal.contentAnimationClass}`}>
+            <div className="flex items-start justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">檔案詳情</h3>
+              <button
+                onClick={detailModal.handleClose}
+                className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <div className="flex-shrink-0">
+                  {getFileIcon(selectedFile.name)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-lg font-semibold text-gray-900 truncate">{selectedFile.name}</h4>
+                  <p className="text-sm text-gray-500">檔案大小: {selectedFile.size}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">分類</label>
+                  <p className="mt-1 text-sm text-gray-900">{selectedFile.category}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">上傳日期</label>
+                  <p className="mt-1 text-sm text-gray-900">{selectedFile.uploadDate}</p>
+                </div>
+                {selectedFile.uploader && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">上傳者</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedFile.uploader}</p>
+                  </div>
+                )}
+                {selectedFile.status && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">狀態</label>
+                    <p className="mt-1 text-sm text-gray-900">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        selectedFile.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        selectedFile.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                        selectedFile.status === 'failed' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {selectedFile.status === 'completed' ? '已完成' :
+                         selectedFile.status === 'processing' ? '處理中' :
+                         selectedFile.status === 'failed' ? '失敗' : '待處理'}
+                      </span>
+                    </p>
+                  </div>
+                )}
+                {selectedFile.isVectorized !== undefined && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">向量化</label>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {selectedFile.isVectorized ? '✓ 已完成' : '✗ 未完成'}
+                    </p>
+                  </div>
+                )}
+                {selectedFile.vectorCount !== undefined && selectedFile.vectorCount > 0 && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">向量數量</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedFile.vectorCount}</p>
+                  </div>
+                )}
+                {selectedFile.downloadCount !== undefined && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">下載次數</label>
+                    <p className="mt-1 text-sm text-gray-900">{selectedFile.downloadCount}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  handleDownload(selectedFile.id);
+                }}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer font-medium flex items-center space-x-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                <span>下載檔案</span>
+              </button>
+              <button
+                onClick={detailModal.handleClose}
+                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer font-medium"
+              >
+                關閉
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 刪除確認模態框 */}
       {deleteModal.shouldRender && (

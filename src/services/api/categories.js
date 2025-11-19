@@ -9,11 +9,24 @@ import { ROLES, checkPermission } from '../utils/permissions.js';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 /**
- * 獲取 Authorization Header
+ * 獲取 Authorization Header（加上代理支援）
  */
-const getAuthHeader = () => ({
-  'Authorization': `Bearer ${localStorage.getItem('token')}`
-});
+const getAuthHeader = () => {
+  const headers = {
+    'Authorization': `Bearer ${localStorage.getItem('token')}`
+  };
+  
+  // 如果是代理模式，添加 X-Proxy-Department-Id header
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    const user = JSON.parse(userStr);
+    if (user.isSuperAdminProxy && user.departmentId) {
+      headers['X-Proxy-Department-Id'] = user.departmentId.toString();
+    }
+  }
+  
+  return headers;
+};
 
 /**
  * 取得所有分類（僅分類名稱）
@@ -113,7 +126,7 @@ export const getCategoriesWithDetails = async () => {
  * @param {string} color - 分類顏色
  * @returns {Promise} 新增結果
  */
-export const addCategory = async (name, color = 'gray') => {
+export const addCategory = async (name, color = '#6B7280') => {
   try {
     // 權限檢查：需要 admin 權限
     const permission = checkPermission(ROLES.ADMIN);
@@ -141,7 +154,7 @@ export const addCategory = async (name, color = 'gray') => {
           id: data.id,
           name: data.name,
           color: data.color,
-          count: 0,
+          count: data.fileCount || 0,
           createdAt: data.createdAt
         },
         message: '分類新增成功'

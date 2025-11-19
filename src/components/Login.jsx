@@ -151,9 +151,10 @@ function Login({ onLogin }) {
             <div className="mt-6 text-center text-xs text-gray-500 border-t pt-4">
               <p className="font-semibold mb-2">測試帳號</p>
               <div className="space-y-1">
-                <p>系統管理員：superadmin / super123</p>
+                <p>系統管理員：superadmin / admin123</p>
                 <p>人事室管理員：hr_admin / admin123</p>
                 <p>會計室管理員：acc_admin / admin123</p>
+                <p>總務處管理員：ga_admin / admin123</p>
               </div>
             </div>
           )}

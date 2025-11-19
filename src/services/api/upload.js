@@ -9,9 +9,22 @@ import { ROLES, checkPermission } from '../utils/permissions.js';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 // 取得授權標頭
-const getAuthHeader = () => ({
-  'Authorization': `Bearer ${localStorage.getItem('token')}`
-});
+const getAuthHeader = () => {
+  const headers = {
+    'Authorization': `Bearer ${localStorage.getItem('token')}`
+  };
+  
+  // 如果是代理模式，添加 X-Proxy-Department-Id header
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    const user = JSON.parse(userStr);
+    if (user.isSuperAdminProxy && user.departmentId) {
+      headers['X-Proxy-Department-Id'] = user.departmentId.toString();
+    }
+  }
+  
+  return headers;
+};
 
 /**
  * 檢查重複檔案並找出相關檔案
@@ -20,13 +33,13 @@ const getAuthHeader = () => ({
  */
 export const checkDuplicates = async (fileList) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/files/check-duplicates`, {
+    const response = await fetch(`${API_BASE_URL}/upload/check-duplicates`, {
       method: 'POST',
       headers: {
         ...getAuthHeader(),
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ files: fileList })
+      body: JSON.stringify({ filenames: fileList.map(f => f.name) })
     });
     
     if (response.ok) {
@@ -118,11 +131,11 @@ export const getUploadProgress = async (taskId) => {
     });
     
     if (response.ok) {
-      const data = await response.json();
-      // 後端返回完整任務資訊: { id, userId, userName, status, totalFiles, processedFiles, ... }
+      const result = await response.json();
+      // 後端返回: { success: true, data: { taskId, status, totalFiles, ... } }
       return {
         success: true,
-        data: data
+        data: result.data  // 提取 data 欄位
       };
     } else {
       const error = await response.json();

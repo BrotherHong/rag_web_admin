@@ -36,6 +36,7 @@ function DepartmentManagement({ departments, onRefresh, isLoading }) {
   // 表單資料
   const [formData, setFormData] = useState({
     name: '',
+    slug: '',
     description: '',
     color: '#3B82F6' // 預設藍色
   });
@@ -57,6 +58,7 @@ function DepartmentManagement({ departments, onRefresh, isLoading }) {
     setEditingDept(dept);
     setFormData({
       name: dept.name,
+      slug: dept.slug || '',
       description: dept.description || '',
       color: dept.color
     });
@@ -67,6 +69,7 @@ function DepartmentManagement({ departments, onRefresh, isLoading }) {
   const resetForm = () => {
     setFormData({
       name: '',
+      slug: '',
       description: '',
       color: '#3B82F6' // 預設藍色
     });
@@ -76,6 +79,17 @@ function DepartmentManagement({ departments, onRefresh, isLoading }) {
   const handleAddDepartment = async () => {
     if (!formData.name.trim()) {
       toast.warning('請輸入處室名稱');
+      return;
+    }
+
+    if (!formData.slug.trim()) {
+      toast.warning('請輸入處室代稱 (Slug)');
+      return;
+    }
+
+    // 驗證 slug 格式
+    if (!/^[a-z0-9-]+$/.test(formData.slug)) {
+      toast.warning('處室代稱只能包含小寫字母、數字和連字號');
       return;
     }
 
@@ -99,6 +113,17 @@ function DepartmentManagement({ departments, onRefresh, isLoading }) {
   const handleEditDepartment = async () => {
     if (!formData.name.trim()) {
       toast.warning('請輸入處室名稱');
+      return;
+    }
+
+    if (!formData.slug.trim()) {
+      toast.warning('請輸入處室代稱 (Slug)');
+      return;
+    }
+
+    // 驗證 slug 格式
+    if (!/^[a-z0-9-]+$/.test(formData.slug)) {
+      toast.warning('處室代稱只能包含小寫字母、數字和連字號');
       return;
     }
 
@@ -196,6 +221,19 @@ function DepartmentManagement({ departments, onRefresh, isLoading }) {
     }
   };
 
+  // 複製處室連結
+  const copyDepartmentLink = (dept) => {
+    const clientUrl = import.meta.env.VITE_CLIENT_URL || 'http://localhost:5173';
+    const link = `${clientUrl}/${dept.slug}`;
+    
+    navigator.clipboard.writeText(link).then(() => {
+      toast.success(`已複製連結：${link}`);
+    }).catch((error) => {
+      console.error('複製失敗:', error);
+      toast.error('複製連結失敗');
+    });
+  };
+
   return (
     <>
       {/* 標題和新增按鈕 */}
@@ -251,6 +289,23 @@ function DepartmentManagement({ departments, onRefresh, isLoading }) {
                     <div>
                       <h3 className="text-xl font-bold text-gray-900">{dept.name}</h3>
                       <p className="text-sm text-gray-500">{dept.description || '暫無描述'}</p>
+                      {dept.slug && (
+                        <button
+                          onClick={() => copyDepartmentLink(dept)}
+                          className="text-xs text-gray-400 mt-1 hover:text-gray-600 transition-colors group"
+                          title="點擊複製連結"
+                        >
+                          <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 group-hover:text-gray-800 transition-colors cursor-pointer">
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                            </svg>
+                            /{dept.slug}
+                            <svg className="w-3 h-3 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -344,6 +399,20 @@ function DepartmentManagement({ departments, onRefresh, isLoading }) {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  處室代稱 (Slug) *
+                </label>
+                <input
+                  type="text"
+                  value={formData.slug}
+                  onChange={(e) => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  placeholder="例如：hr, acc, ga"
+                  pattern="[a-z0-9-]+"
+                />
+                <p className="mt-1 text-xs text-gray-500">用於 URL 路徑，只能包含小寫字母、數字和連字號</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   處室描述
                 </label>
                 <textarea
@@ -413,6 +482,20 @@ function DepartmentManagement({ departments, onRefresh, isLoading }) {
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  處室代稱 (Slug) *
+                </label>
+                <input
+                  type="text"
+                  value={formData.slug}
+                  onChange={(e) => setFormData({...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  placeholder="例如：hr, acc, ga"
+                  pattern="[a-z0-9-]+"
+                />
+                <p className="mt-1 text-xs text-gray-500">用於 URL 路徑，只能包含小寫字母、數字和連字號</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
